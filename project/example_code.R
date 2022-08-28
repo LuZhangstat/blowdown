@@ -78,14 +78,13 @@ p2
 
 ## fit model in stan ##
 library(cmdstanr)
-file <- file.path(getwd(), "project/blowdown_save_RAM.stan")
-# file <- file.path(getwd(), "project/blowdown_save_RAM_2.stan")
-# file <- file.path(getwd(), "project/blowdown.stan")
+file <- file.path(getwd(), "project/blowdown_flat.stan")
+#file <- file.path(getwd(), "project/blowdown_save_RAM.stan")
 mod <- cmdstan_model(file)
 
 #-------------------------- Set parameters of priors --------------------------#
 mu_beta = rep(0, p)     # mean vector in the Gaussian prior of beta
-V_beta = diag(p) * 10    # covariance matrix in the Gaussian prior of beta
+V_beta = diag(p) * 1000    # covariance matrix in the Gaussian prior of beta
 ss = 3 * sqrt(2)       # scale parameter in the normal prior of sigma 
 st = 3 * sqrt(2)     # scale parameter in the normal prior of tau     
 ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
@@ -94,8 +93,7 @@ data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh,
              gridA = grid.A / 1000,
              plotid_ind = plotid_ind,
              mu_beta = mu_beta, V_beta = V_beta,
-             ap = ap, bp = bp, ss = ss, st = st)#,
-#Dist_X = Dist_X)
+             ap = ap, bp = bp, ss = ss, st = st)
 
 fit <- mod$sample(
   data = data,
@@ -124,7 +122,7 @@ opt$draws()
 # 1 -343    56 0.0056  15    3083 3.1e-05
 
 # compute the target log-density#
-phi = 6
+phi = 5
 t <- proc.time()
 C_B <- Block_COV(grid.A, plotid_ind, phi)
 proc.time()-t
@@ -142,7 +140,7 @@ ind_ls_B = plotid_ind
 ind_ls_BU = predid_ind
 beta_omega_sam <- sample_beta_omega(phi_ls, sigmasq_ls, tausq_ls,
                                     coords_A, coords_AU, ind_ls_B, ind_ls_BU,
-                                    HX, mu_beta, V_beta)
+                                    HX, mu_beta, V_beta, flat_prior = TRUE)
 
 yU_ls <- pred_sample_y(beta_omega_sam$beta_ls, beta_omega_sam$omega_BU_ls, 
                        tausq_ls, HXU, DhU)

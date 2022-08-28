@@ -1,4 +1,4 @@
-/* Response NNGP model */
+/* COSP model */
 
 functions{
   matrix Block_COV(matrix coords, int[] ind_ls, real phi, int nb){
@@ -56,34 +56,6 @@ functions{
     
     return multi_normal_lpdf(y | Mu, COV);
   }
-  
-  // vector beta_omega_rng(vector y, matrix HX, matrix C_B, real sigmasq,
-  //                       real tausq, vector invVmu_beta, matrix invV_beta, 
-  //                       vector Dh, int nb, int p){
-    //                         
-    //   // recover posterior samples of beta and omega
-    //   // p: number of predictors
-    //   
-    //   vector[nb+p] m;
-    //   matrix[nb+p, nb+p] invM;
-    //   matrix[nb+p, nb+p] M;
-    //   matrix[nb, nb] invC_B;
-    //   
-    //   invC_B = inverse_spd(C_B);
-    //   
-    //   invM = crossprod((diag_matrix(sqrt(1 ./ (Dh * tausq))) * 
-    //                     append_col(HX, identity_matrix(nb))));
-    //   invM[1:p, 1:p] = invM[1:p, 1:p] + invV_beta;
-    //   invM[(p+1):(nb+p), (p+1):(nb+p)] = invM[(p+1):(nb+p), (p+1):(nb+p)] +
-    //         invC_B / sigmasq;
-    //   
-    //   M = inverse_spd(invM);
-    //   m[1:p] = HX'* (diag_matrix(1 ./ (Dh * tausq)) * y) + invVmu_beta;
-    //   m[(p+1):(p+nb)] = diag_matrix(1 ./ (Dh * tausq)) * y;
-    //   
-    //   return multi_normal_rng(M*m, M);
-    // }
-    
 }
 
 data {
@@ -136,20 +108,9 @@ model{
   Mu = HX * mu_beta;
   
   y ~ multi_normal(Mu, COV);  
-  //C_B =  identity_matrix(nb);
   //y ~ COSP(HX, C_B, sigmasq, tausq, mu_beta, V_beta, Dh, nb);
 }
 
-// generated quantities {
-  //   vector[p + nb] beta_omega_B;
-  //   {
-    //     matrix[nb, nb] C_B;
-    //     C_B = Block_COV(gridA, plotid_ind, phi, nb); 
-    //   }
-    //   beta_omega_B = beta_omega_rng(y, HX, C_B, sigmasq, tausq, invVmu_beta, 
-    //                  invV_beta, Dh, nb, p);
-    // }
-    
     
     
     
