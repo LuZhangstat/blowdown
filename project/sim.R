@@ -6,7 +6,7 @@ library(ggplot2)
 source("./project/utils.R")
 
 ## simulate data ##
-set.seed(11)
+set.seed(1234)
 side.A = seq(from = 1/72, to = 1-1/72, by = 1/36)
 grid.A = expand.grid(side.A, side.A) # grid on the finest resolution
 N_A = nrow(grid.A)
@@ -85,8 +85,6 @@ library(cmdstanr)
 library(bayesplot)
 file <- file.path(getwd(), "project/blowdown_flat.stan")
 # file <- file.path(getwd(), "project/blowdown_save_RAM.stan")
-# file <- file.path(getwd(), "project/blowdown_save_RAM_2.stan")
-# file <- file.path(getwd(), "project/blowdown.stan")
 mod <- cmdstan_model(file)
 
 #-------------------------- Set parameters of priors --------------------------#
@@ -156,18 +154,7 @@ plot(rowMeans(beta_omega_sam$omega_B_ls +
                 rep(1, nb) %*% t(beta_omega_sam$beta_ls[1, ])), w_B + 1)
 abline(a = 0, b = 1)
 
-## try ADVI ##
-t <- proc.time()
-fit_ADVI <- mod$variational(
-  data = data,
-  seed = 1,
-  refresh = 1,
-  sig_figs = 18,
-  algorithm = "fullrank",
-  save_latent_dynamics = TRUE,
-  output_samples = 100
-)
-proc.time() - t
-
-fit_ADVI$time()
-summary(fit_ADVI$draws())
+# check how many 95% posterior intervals covers the true value
+incp_w <- beta_omega_sam$omega_B_ls + rep(1, nb) %*% t(beta_omega_sam$beta_ls[1, ])
+qut <- apply(incp_w, 1, f <- function(x){quantile(x, c(0.025, 0.975))})
+sum((qut[1,] < (w_B + 1)) & (qut[2,] > (w_B + 1))) / 63
