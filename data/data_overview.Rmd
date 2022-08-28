@@ -1,0 +1,82 @@
+---
+title: "Data overview"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+```
+
+Following your notation as best I can recall from what you shared the other day. 
+
+1. The 20m radius forest inventory plots ($B$'s) where the outcome timber volume is observed.
+    ```{r}
+    plot.y <- read.csv("outcome_y_plot.csv")
+    plot.y %>% glimpse
+    ```
+    The columns are as follows:
+    
+    1. `obs.plot.id` is the unique plot number for each of the 62 plots.
+    2. `sub.region` is the sub-region name as described in the paper. As we talked about, you might consider a site specific random effect for the regression slope parameters; however, a first pass model might just ignore sub-region.
+    3. `volume.m3.ha` is the outcome variable $y$ that is the measurement of timber volume per ha on the plot.
+    4. `n.a` is the number of 1-by-1 pixels ($A$'s) that have centroids that fall within the plot circle (this is the denominator in $h_{li}$). This should be real close to $\pi 20^2 = 1256.637$ (any differnece is due to pixel grid missalginment with the circles which causes pixel centroids to sometimes fall outside the plot circle's boundary).
+    4. `coords.x` easting coordinate in meters of the plot centroid.
+    5. `coords.y` northing coordinate in meters of the plot centroid.
+    
+2. The 1-by-1 meter pixels of forest canopy height measurements over each 20m radius forest inventory plot ($A$'s). The average of these values over each plot is the predictor variable used in the paper.
+    ```{r}
+    plot.grid.x <- read.csv("predictor_x_grid.csv")
+    plot.grid.x %>% glimpse
+    ```
+  
+    The columns are as follows:
+    
+    1. `obs.plot.id` corresponds to the `obs.plot.id` in the `plot.y` file and should be used to link the $A$'s to $B$'s. See example below.
+    2. `height.m` is the forest canopy height measurement on each 1-by-1 meter grid cell. This is used to generate the predictor, e.g., average height over each plot.
+    3. `coords.x` easting coordiante in meters of the grid centroid.
+    4. `coords.y` northing coordiante in meters of the grid centroid.
+  
+    For example, the non-spatial regression in the paper was as follows.
+    ```{r}
+    ## Compute the average height.m over each plot.
+    x <- plot.grid.x %>% group_by(obs.plot.id) %>% summarize(height.mean = mean(height.m)) %>% select(height.mean) %>% pull
+    y <- plot.y %>% select(volume.m3.ha) %>% pull
+    plot(x, y, xlab = "Forest canopy height (m)", ylab = "Timber volume (m^3/ha)")
+    summary(lm(y ~ x))
+    ```
+    
+3. The 1-by-1 meter pixels of forest canopy height measurements over each blowdown polygon (these are the prediction units). As I noted at the bottom of your modeling notes, it might be good to jointly predict the pixels within each blowdown polygon (that way we acknolage that pixels within a blow)
+    ```{r}
+    pred.grid.x <- read.csv("prediction_x_grid.csv")
+    pred.grid.x %>% glimpse
+    ```
+  
+    The columns are as follows:
+    
+    1. `pred.poly.id` a unique id for each of the 564 blowdown polygons.
+    2. `sub.region` is the sub-region name as described in the paper.
+    2. `height.m` is the forest canopy height measurement on each 1-by-1 meter grid cell. This is used to generate the predictor, e.g., average height over each plot.
+    3. `coords.x` easting coordiante in meters of the grid centroid.
+    4. `coords.y` northing coordiante in meters of the grid centroid.
+  
+    For example, a naive non-spatial regression similar to that in the paper is as follows.
+    ```{r}
+    ## Compute the average height.m over each plot.
+    x <- plot.grid.x %>% group_by(obs.plot.id) %>% summarize(height.mean = mean(height.m)) %>% select(height.mean) %>% pull
+    y <- plot.y %>% select(volume.m3.ha) %>% pull
+    plot(x, y, xlab = "Forest canopy height (m)", ylab = "Timber volume (m^3/ha)")
+    mod <- lm(y ~ x)
+    
+    ## Average forest canopy height over each blowdown.
+    x.pred <- pred.grid.x %>% group_by(pred.poly.id) %>% summarize(height.mean = mean(height.m)) %>% select(height.mean) %>% pull
+    
+    ## Area of each blowdown in ha.
+    area.ha.pred <- pred.grid.x %>% group_by(pred.poly.id) %>% summarize(area.ha.pred = n()/10000) %>% select(area.ha.pred) %>% pull
+    
+    ## Predicted *total* timber volume for blowdown. 
+    y.pred.m3.tot <- cbind(1, x.pred)%*%coefficients(mod)*area.ha.pred
+    
+    ## Check the estimated timber volume against Table 4 in the paper.
+    check <- pred.grid.x %>% group_by(pred.poly.id) %>% summarize(sub.region = first(sub.region)) %>% cbind(., y.pred.m3.tot) %>% group_by(sub.region) %>% summarize(total.loss = sum(y.pred.m3.tot))
+    check ## Looks pretty good!
+    ```
