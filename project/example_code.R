@@ -9,24 +9,24 @@ source("./project/utils.R")
 # we only fit data in Frohn in this example #
 plot.y <- read.csv("./data/outcome_y_plot.csv")
 plot.y %>% glimpse
-plot.y <- plot.y %>% filter(sub.region == "Frohn") 
+plot.y <- plot.y %>% filter(sub.region == "Liesing") #"Frohn") 
 plot.y %>% glimpse
 
 plot.grid.x <- read.csv("./data/predictor_x_grid.csv")
 plot.grid.x %>% glimpse
-plot.grid.x <- plot.grid.x %>% filter(obs.plot.id <= 21)
+plot.grid.x <- plot.grid.x %>% filter(obs.plot.id >=45 & obs.plot.id<=51) #<= 21)
 plot.grid.x %>% glimpse
 
 
 pred.grid.x <- read.csv("./data/prediction_x_grid.csv")
 pred.grid.x %>% glimpse
-# pred.grid.x <- pred.grid.x %>% filter(sub.region == "Frohn")
+pred.grid.x <- pred.grid.x %>% filter(sub.region == "Liesing") #"Frohn")
 # we only predict on three small polygon in this example
-predid_ind <- c(order(pred.grid.x$pred.poly.id)[     # record the first index of each polygon
-  !duplicated(pred.grid.x$pred.poly.id)], nrow(pred.grid.x) + 1)
-pred.grid.x <- pred.grid.x[c(1:(predid_ind[2]-1), 
-                             (predid_ind[3]:(predid_ind[5] - 1))), ]
-pred.grid.x %>% glimpse
+# predid_ind <- c(order(pred.grid.x$pred.poly.id)[     # record the first index of each polygon
+#   !duplicated(pred.grid.x$pred.poly.id)], nrow(pred.grid.x) + 1)
+# pred.grid.x <- pred.grid.x[c(1:(predid_ind[2]-1), 
+#                              (predid_ind[3]:(predid_ind[5] - 1))), ]
+# pred.grid.x %>% glimpse
 
 
 ## Compute the average height.m over each plot and summary with observation in one dataset
@@ -35,13 +35,13 @@ x_obs_bar <- plot.grid.x %>% group_by(obs.plot.id) %>%
 obs_xy <- plot.y %>% select(obs.plot.id, sub.region, volume.m3.ha) %>% 
   inner_join(x_obs_bar, by = "obs.plot.id") %>% 
   mutate(intercept = 1) %>%
-  mutate(x.Frohn = height.mean * (sub.region == "Frohn")) %>%
+  # mutate(x.Frohn = height.mean * (sub.region == "Frohn")) %>%
   # mutate(x.Laas = height.mean * (sub.region == "Laas")) %>%
   # mutate(x.Mauthen = height.mean * (sub.region == "Mauthen")) %>%
-  # mutate(x.Liesing = height.mean * (sub.region == "Liesing")) %>%
+  mutate(x.Liesing = height.mean * (sub.region == "Liesing")) %>%
   # mutate(x.Ploecken = height.mean * (sub.region == "Ploecken")) %>% 
   # select(volume.m3.ha, intercept, x.Frohn, x.Laas, x.Mauthen, x.Liesing, x.Ploecken)
-  select(volume.m3.ha, intercept, x.Frohn)
+  select(volume.m3.ha, intercept, x.Liesing)#x.Frohn)
 
 HX = as.matrix(obs_xy[, -1]); y = obs_xy[, 1]
 counts <- plot.grid.x %>% group_by(obs.plot.id) %>% summarize(counts = n()) %>%
@@ -72,6 +72,8 @@ p1
 
 p2 <- ggplot(plot.grid.x, aes(x = coord.x, y = coord.y, colour = height.m)) + 
   geom_point(size = 0.01) + 
+  geom_point(data = plot.y, aes(x=coords.x, y=coords.y), size=3, shape=1,
+             color="orange") +
   geom_point(data = pred.grid.x, aes(x = coords.x, y = coords.y), size = 0.01)
 p2
 
@@ -98,12 +100,12 @@ data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh,
 fit <- mod$sample(
   data = data,
   seed = 1,
-  chains = 1,
+  chains = 4,
   parallel_chains = 4,
-  refresh = 1,
+  refresh = 100,
   save_warmup = TRUE,
-  iter_warmup = 3,
-  iter_sampling = 3,
+  iter_warmup = 500,
+  iter_sampling = 500,
   sig_figs = 18
 )
 

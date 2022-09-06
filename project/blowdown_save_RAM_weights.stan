@@ -6,7 +6,7 @@ functions{
     // int_ls: records the first index for each plot
     // nb: number of observed response
     // phi: parameter
-    // hA: weights (hij) for each coords
+    // hA: weights (h_{li}) for each cell in the fine grid
     
     matrix[nb, nb] C_B;
     
@@ -40,23 +40,6 @@ functions{
     return C_B;
   }
   
-  real COSP_lpdf(vector y, matrix HX, matrix C_B, real sigmasq, real tausq,
-  vector mu_beta, matrix V_beta, vector Dh, int nb){
-    // y: vector of observed response
-    // HX: averaged ALS variables
-    // C_B: output of function Block_COV
-    // sigmasq, tausq: parameters
-    // mu_beta, V_beta: mean and covariance matrix of the prior of regression coefficient beta
-    // Dh: scales of noise of the responses
-    
-    matrix[nb, nb] COV;
-    vector[nb] Mu;
-    
-    COV = sigmasq * C_B + HX * V_beta * HX' + tausq * diag_matrix(Dh);
-    Mu = HX * mu_beta;
-    
-    return multi_normal_lpdf(y | Mu, COV);
-  }
 }
 
 data {
@@ -110,7 +93,6 @@ model{
   Mu = HX * mu_beta;
   
   y ~ multi_normal(Mu, COV);  
-  //y ~ COSP(HX, C_B, sigmasq, tausq, mu_beta, V_beta, Dh, nb);
 }
 
     
