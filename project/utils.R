@@ -453,7 +453,7 @@ pred_sample_y <- function(beta_ls, omega_BU_ls, tausq_ls, HXU, DhU){
   yU_ls <- matrix(NA, nrow = nbu, ncol = n_sam)
   
   for(i in 1:n_sam){
-    noise <- DhU * rnorm(nbu) * sqrt(tausq_ls[i])
+    noise <- sqrt(DhU) * rnorm(nbu) * sqrt(tausq_ls[i])
     yU_ls[, i] <- HXU %*% beta_ls[, i] + omega_BU_ls[, i] + noise
   }
   return(yU_ls)

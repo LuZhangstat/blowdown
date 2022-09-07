@@ -6,8 +6,9 @@ library(ggplot2)
 source("./project/utils.R")
 
 ## simulate data ##
-set.seed(4) #1
-side.A = seq(from = 1/72, to = 1-1/72, by = 1/36)
+set.seed(1234) #1
+#side.A = seq(from = 1/72, to = 1-1/72, by = 1/36)
+side.A = seq(from = 1/54, to = 1-1/54, by = 1/27)
 grid.A = expand.grid(side.A, side.A) # grid on the finest resolution
 N_A = nrow(grid.A)
 D <- as.matrix(dist(grid.A))         # distance matrix of the finest grid
@@ -24,9 +25,9 @@ y_A <- rnorm(N_A, X %*% B + w_A, sqrt(tau.sq))
 # plot.centroid = expand.grid(c(1/16, 3/16, 5/16, 7/16, 9/16, 11/16, 13/16, 15/16), 
 #                             c(1/16, 3/16, 5/16, 7/16, 9/16, 11/16, 13/16, 15/16)) # center of 9 plots
 
-plot.centroid =  expand.grid(side.A[seq(3, 36, by = 4)], side.A[seq(3, 36, by = 4)])
+plot.centroid =  expand.grid(side.A[seq(2, 27, by = 3)], side.A[seq(2, 27, by = 3)])
 D_plot <- rdist(grid.A, plot.centroid) 
-A_plot_id <- (D_plot < 0.045) %*% c(1:81) # plot id on the finest grid
+A_plot_id <- (D_plot < (sqrt(2)/28 + 0.01)) %*% c(1:81) # plot id on the finest grid
 # A_plot_id <- 1:N_A
 dt_A <- data.frame(y_A = y_A, w_A = w_A, x_A = X[, 2], plot_id = A_plot_id, 
                    coord.x = grid.A[, 1], coord.y = grid.A[, 2])
@@ -39,19 +40,19 @@ w_B = dt_A[obs_ind, ] %>% group_by(plot_id) %>%
   summarize(w_B = mean(w_A)) %>% arrange(plot_id) %>% select(w_B) %>% pull 
 
 # predict region
-O_d1 <- rdist(grid.A, t(c(0.3, 0.65))) 
-O_d2 <- rdist(grid.A, t(c(0.3, 0.35))) 
-ind_O <- ((O_d1 + O_d2) < 0.44 & (O_d1 + O_d2) > 0.39)
+O_d1 <- rdist(grid.A, t(c(0.2778, 0.69))) 
+O_d2 <- rdist(grid.A, t(c(0.2778, 0.31))) 
+ind_O <- ((O_d1 + O_d2) < 0.49 & (O_d1 + O_d2) > 0.43)
 
-ind_K1 <- (grid.A[, 1] >0.6 & grid.A[, 1] < 0.68 & grid.A[, 2] < 0.72 & 
-            grid.A[, 2] > 0.28)
+ind_K1 <- (grid.A[, 1] >0.6 & grid.A[, 1] < 0.68 & grid.A[, 2] < 0.75 & 
+            grid.A[, 2] > 0.25)
 
-ind_K2 <- (grid.A[, 1] >0.68 & grid.A[, 1] < 0.9 & grid.A[, 2] < 0.72 & 
+ind_K2 <- (grid.A[, 1] >0.68 & grid.A[, 1] < 0.9 & grid.A[, 2] < 0.75 & 
              grid.A[, 2] > 0.5) & (grid.A[, 2] < (grid.A[, 1] - 0.1)) &
   (grid.A[, 2] > (grid.A[, 1] - 0.16))
 
 ind_K3 <- (grid.A[, 1] >0.68 & grid.A[, 1] < 0.9 & grid.A[, 2] < 0.5 & 
-             grid.A[, 2] > 0.28) & (grid.A[, 2] < (-grid.A[, 1] + 1.15)) &
+             grid.A[, 2] > 0.25) & (grid.A[, 2] < (-grid.A[, 1] + 1.15)) &
   (grid.A[, 2] > (-grid.A[, 1] +1.1))
 
 ind_K = ind_K1 | ind_K2 | ind_K3
@@ -212,6 +213,8 @@ abline(a = 0, b = 1)
 # check the prediction plots
 # O:
 hist(yU_ls[1, ])
+abline(v = mean(yU_ls[1, ]), col = "blue")
+abline(v = mean(y_A[ind_O]), col = "red")
 mean(yU_ls[1, ])
 quantile(yU_ls[1, ], c(0.025, 0.975))
 mean(y_A[ind_O])
@@ -219,6 +222,9 @@ mean(y_A[ind_O])
 
 # K:
 hist(yU_ls[2, ])
+abline(v = mean(yU_ls[2, ]), col = "blue")
+abline(v = mean(y_A[ind_K]), col = "red")
+
 mean(yU_ls[2, ])
 quantile(yU_ls[2, ], c(0.025, 0.975))
 mean(y_A[ind_K])
