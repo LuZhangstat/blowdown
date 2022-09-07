@@ -256,6 +256,7 @@ sample_beta_omega_h <- function(phi_ls, sigmasq_ls, tausq_ls, coords_A,
   
   # generate posterior samples of beta omega and omega^u_B
   for(k in 1:n_sam){
+    #cat(k, "\t")
     Chol_CB <- chol(C_B_ls[, , k])
     
     # generate posterior samples of beta and omega
