@@ -22,9 +22,6 @@ w_A <- rmvn(1, rep(0, N_A), sigma.sq * R)
 y_A <- rnorm(N_A, X %*% B + w_A, sqrt(tau.sq))
 
 # target units #
-# plot.centroid = expand.grid(c(1/16, 3/16, 5/16, 7/16, 9/16, 11/16, 13/16, 15/16), 
-#                             c(1/16, 3/16, 5/16, 7/16, 9/16, 11/16, 13/16, 15/16)) # center of 9 plots
-
 plot.centroid =  expand.grid(side.A[seq(2, 27, by = 3)], side.A[seq(2, 27, by = 3)])
 D_plot <- rdist(grid.A, plot.centroid) 
 A_plot_id <- (D_plot < (sqrt(2)/28 + 0.01)) %*% c(1:81) # plot id on the finest grid
@@ -45,7 +42,7 @@ O_d2 <- rdist(grid.A, t(c(0.2778, 0.31)))
 ind_O <- ((O_d1 + O_d2) < 0.49 & (O_d1 + O_d2) > 0.43)
 
 ind_K1 <- (grid.A[, 1] >0.6 & grid.A[, 1] < 0.68 & grid.A[, 2] < 0.75 & 
-            grid.A[, 2] > 0.25)
+             grid.A[, 2] > 0.25)
 
 ind_K2 <- (grid.A[, 1] >0.68 & grid.A[, 1] < 0.9 & grid.A[, 2] < 0.75 & 
              grid.A[, 2] > 0.5) & (grid.A[, 2] < (grid.A[, 1] - 0.1)) &
@@ -61,7 +58,7 @@ ind_K = ind_K1 | ind_K2 | ind_K3
 plot(grid.A[, 1], grid.A[, 2])
 points(dt_A[obs_ind, "coord.x"], 
        dt_A[obs_ind, "coord.y"], col = "orange", cex = 2, pch = 16)
-#points(plot.centroid[obs_ls, 1], plot.centroid[obs_ls, 2], col = "red")
+points(plot.centroid[obs_ls, 1], plot.centroid[obs_ls, 2], col = "red", pch = 0, cex = 4)
 #text(plot.centroid[, 1], plot.centroid[, 2], labels = c(1:81))
 #text(grid.A[, 1], grid.A[, 2], labels = c(1:1296))
 points(grid.A[c(which(ind_O), which(ind_K)), 1], 
@@ -192,9 +189,9 @@ hA = dt_A_obs$weight
 hAU = pred_dta$weight
 
 beta_omega_sam <- sample_beta_omega_h(phi_ls, sigmasq_ls, tausq_ls,
-                                    coords_A, coords_AU, hA, hAU, 
-                                    ind_ls_B, ind_ls_BU,
-                                    HX, mu_beta, V_beta, flat_prior = FALSE)
+                                      coords_A, coords_AU, hA, hAU, 
+                                      ind_ls_B, ind_ls_BU,
+                                      HX, mu_beta, V_beta, flat_prior = FALSE)
 
 yU_ls <- pred_sample_y(beta_omega_sam$beta_ls, beta_omega_sam$omega_BU_ls, 
                        tausq_ls, HXU, DhU)
@@ -228,5 +225,63 @@ abline(v = mean(y_A[ind_K]), col = "red")
 mean(yU_ls[2, ])
 quantile(yU_ls[2, ], c(0.025, 0.975))
 mean(y_A[ind_K])
+
+
+### compare to benchmark 
+file2 <- file.path(getwd(), "project/blowdown_benchmark.stan")
+mod2 <- cmdstan_model(file2)
+
+data2 <- list(n = nb, p = p, y = y, X = HX, 
+              gridA = plot.centroid[obs_ls, ], 
+              mu_beta = mu_beta, V_beta = V_beta,
+              ap = ap, bp = bp, ss = ss, st = st)#,
+#Dist_X = Dist_X)
+
+fit2 <- mod2$sample(
+  data = data2,
+  seed = 1,
+  chains = 4,
+  parallel_chains = 4,
+  refresh = 100,
+  save_warmup = TRUE,
+  iter_warmup = 500,
+  iter_sampling = 500,
+  sig_figs = 18
+)
+
+fit2_draws <- fit2$draws(inc_warmup = FALSE)
+fit2$summary()
+mcmc_trace(fit2$draws("sigmasq"), iter1 = 1) 
+mcmc_trace(fit2$draws("tausq"), iter1 = 1) 
+mcmc_trace(fit2$draws("phi"), iter1 = 1) 
+n_lf2 <- fit2$sampler_diagnostics(inc_warmup = TRUE)[, , "n_leapfrog__"]
+colSums(n_lf2)
+
+pick_sample_id <- seq(5, 2000, by = 10) # pick 200 samples
+phi_ls2 <- c(fit2_draws[, , "phi"])[pick_sample_id]
+sigmasq_ls2 <- c(fit2_draws[, , "sigmasq"])[pick_sample_id]
+tausq_ls2 <- c(fit2_draws[, , "tausq"])[pick_sample_id]
+coords_A2 = plot.centroid[obs_ls, ]
+coords_AU2 = plot.centroid[-obs_ls, ]
+ind_ls_B2 = 1:(nrow(coords_A2) + 1)
+ind_ls_BU2 = 1:(nrow(coords_AU2) + 1)
+hA2 <- rep(1.0, nrow(coords_A2))
+hAU2 <- rep(1.0, nrow(coords_AU2))
+
+beta_omega_sam2 <- sample_beta_omega_h(phi_ls2, sigmasq_ls2, tausq_ls2,
+                                       coords_A2, coords_AU2, hA2, hAU2, 
+                                       ind_ls_B2, ind_ls_BU2,
+                                       HX, mu_beta, V_beta, flat_prior = FALSE)
+HX2 <- as.matrix(dt_A[!obs_ind, ] %>% 
+                   group_by(plot_id) %>% arrange(plot_id) %>%
+                   summarize(x_B = mean(x_A)) %>%  
+                   mutate(intercept = 1) %>%
+                   select(intercept, x_B))
+DhU2 <- rep(1, nrow(HX2))
+
+yU_ls2 <- pred_sample_y(beta_omega_sam2$beta_ls, beta_omega_sam2$omega_BU_ls, 
+                        tausq_ls2, HX2, DhU2)
+
+
 
 
