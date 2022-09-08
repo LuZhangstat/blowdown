@@ -282,6 +282,61 @@ DhU2 <- rep(1, nrow(HX2))
 yU_ls2 <- pred_sample_y(beta_omega_sam2$beta_ls, beta_omega_sam2$omega_BU_ls, 
                         tausq_ls2, HX2, DhU2)
 
+# check result
+# scatter plot of predict y and true y on the unobserved coarse grid #
+y_B_U <- dt_A[!obs_ind, ] %>% group_by(plot_id) %>% 
+  summarize(y_B_U = mean(y_A)) %>% arrange(plot_id) %>% select(y_B_U) %>% pull 
+plot(rowMeans(yU_ls2), y_B_U)
+abline(a = 0, b = 1) # looks good
+
+
+weight_id <- dt_A %>% mutate(pred_id = c(ind_O + ind_K*2), 
+                             pred_I = c(ind_O + ind_K)) %>% 
+  select(plot_id, pred_id, pred_I)
+weight_id %>% glimpse()
+weight_sum <- weight_id[!obs_ind, ] %>% arrange(plot_id) %>%
+  group_by(plot_id) %>% 
+  summarise(pred_n = sum(pred_I), pred_id = max(pred_id)) 
+weight_sum %>% glimpse()
+n1 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 1))
+n2 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 2))
+
+yU_O <- colSums(yU_ls2 * (weight_sum$pred_n * 
+                            as.numeric(weight_sum$pred_id == 1))) / n1
+yU_K <- colSums(yU_ls2 * (weight_sum$pred_n * 
+                            as.numeric(weight_sum$pred_id == 2))) / n2
+
+
+## compare the posterior samples ##
+mean(yU_O)
+quantile(yU_O, c(0.025, 0.975))
+mean(y_A[ind_O])
+
+mean(yU_K)
+quantile(yU_K, c(0.025, 0.975))
+mean(y_A[ind_K])
+
+library(ggplot2)
+dta_check <- data.frame(pred_value = c(yU_ls[1, ], yU_O, yU_ls[2, ], yU_K),
+                        model = rep(rep(c(1, 2), each = 200), 2),
+                        test = rep(c(1, 2), each = 400),
+                        obs = rep(c(mean(y_A[ind_O]), mean(y_A[ind_K])), 
+                                  each = 400))
+dta_check$model = factor(dta_check$model, levels = c(1, 2), 
+                         labels = c("COSP", "Benchmark"))
+dta_check$test = factor(dta_check$test, levels = c(1, 2), 
+                         labels = c("O", "K"))
+
+base_plot = dta_check %>% ggplot(aes(x=pred_value, fill=model)) + 
+  geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
+  scale_fill_manual(values=c("#69b3a2", "#404080")) +
+  theme_bw(base_size = 18) + xlab("prediction") +
+  labs(fill="") + facet_wrap(~ test, nrow = 1) + theme(legend.position="bottom") +
+  geom_vline(data = dta_check %>%  group_by(test) %>% 
+               summarise(mobs = mean(obs)),
+             aes(xintercept=mobs),color="red", linetype="dashed", size=1)
+
+base_plot
 
 
 
