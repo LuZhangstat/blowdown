@@ -250,7 +250,7 @@ yU_pre %>% glimpse()
 
 # average response
 regions <- unique(pred_plot_dat$sub.region)
-region = regions[1]; region
+region = regions[2]; region  #Liesing
 
 p_o <- ggplot(obs_plot_dat, aes(x = coord.x2, y = coord.y2)) + 
   geom_point(size = 0.01, aes(colour = volume.m3.ha)) + 
@@ -337,6 +337,133 @@ quantile(colSums(yU_ls[yU_pre$sub.region == region, ] *
 # "Mauthen": 34840.27 (33900.24 35563.55)
 # "Liesing": 2904.278 (2726.702 3010.066)
 # "Ploecken": 37368.63 (36423.37 38572.36)
+
+## zoom in subregions ##
+# filter large plots for prediction 
+pred_count <- pred_plot_dat %>% group_by(pred.poly.id) %>% 
+  summarise(n = n()) %>% select(pred.poly.id, n)
+pred_count %>% glimpse()
+sum(pred_count$n < 140) / length(pred_count$n) 
+# 48% pred plots are smaller than the observed plots
+sum(pred_count$n < 140*2) / length(pred_count$n) 
+# two-third of pred plots are smaller that 2 times the observed plots
+
+pick_pred_plot_id <- pred_count$pred.poly.id[pred_count$n < 140*2]
+pick_small_pred_ind <- sapply(pred_plot_dat$pred.poly.id, 
+                              f <- function(x){any(x == pick_pred_plot_id)})
+
+pred_plot_dat_small <- pred_plot_dat[pick_small_pred_ind, ]
+
+# 1. zoom in region Ploecken
+region = regions[5]; region  
+
+p_py <-  ggplot(pred_plot_dat_small, aes(x = coords.x2, y = coords.y2)) + 
+  geom_point(size = 0.01, aes(colour = volume.m3.ha), 
+             show.legend = FALSE)+
+  geom_point(data = obs_plot_dat,
+             size = 0.01, 
+             aes(x = coord.x2, y = coord.y2,
+                 #fill = volume.m3.ha, 
+                 colour = volume.m3.ha)) +
+  geom_point(data = plot.y, aes(x=coords.x, y=coords.y), size=5, shape=1,
+             color="orange", stroke = 1) +
+  scale_color_gradient(limits = range(obs_plot_dat$volume.m3.ha,
+                                     pred_plot_dat$volume.m3.ha),
+                      name = expression(m^3/ha))+
+  xlim(422300, 423600) + ylim(163223, 164100) + xlab("x") + ylab("y") 
+p_py
+
+ggsave("./pics/Ploecken_zoom.png", plot = p_py, 
+       width = 6, height = 3.5, units = "in", dpi = 600)
+
+# zoom in Mauthen
+region = regions[3]; region  
+
+p_py <-  ggplot(pred_plot_dat_small, aes(x = coords.x2, y = coords.y2)) + 
+  geom_point(size = 0.01, aes(colour = volume.m3.ha), 
+             show.legend = FALSE)+
+  geom_point(data = obs_plot_dat,
+             size = 0.01, 
+             aes(x = coord.x2, y = coord.y2,
+                 #fill = volume.m3.ha, 
+                 colour = volume.m3.ha)) +
+  geom_point(data = plot.y, aes(x=coords.x, y=coords.y), size=5, shape=1,
+             color="orange", stroke = 1) +
+  scale_color_gradient(limits = range(obs_plot_dat$volume.m3.ha,
+                                      pred_plot_dat$volume.m3.ha),
+                       name = expression(m^3/ha))+
+  xlim(421000, 422200) + ylim(167500, 168300) + xlab("x") + ylab("y") 
+p_py
+
+ggsave("./pics/Mauthen_zoom.png", plot = p_py, 
+       width = 6.5, height = 3.5, units = "in", dpi = 600)
+
+
+# zoom in Lass
+region = regions[2]; region  
+
+p_py <-  ggplot(pred_plot_dat_small, aes(x = coords.x2, y = coords.y2)) + 
+  geom_point(size = 0.01, aes(colour = volume.m3.ha), 
+             show.legend = FALSE)+
+  geom_point(data = obs_plot_dat,
+             size = 0.01, 
+             aes(x = coord.x2, y = coord.y2,
+                 #fill = volume.m3.ha, 
+                 colour = volume.m3.ha)) +
+  geom_point(data = plot.y, aes(x=coords.x, y=coords.y), size=5, shape=1,
+             color="orange", stroke = 1) +
+  scale_color_gradient(limits = range(obs_plot_dat$volume.m3.ha,
+                                      pred_plot_dat$volume.m3.ha),
+                       name = expression(m^3/ha))+
+  xlim(422800, 424300) + ylim(173500, 174300) + xlab("x") + ylab("y") 
+p_py
+
+ggsave("./pics/Laas_zoom_small.png", plot = p_py, 
+       width = 6.5, height = 3.0, units = "in", dpi = 600)
+
+p_py2 <-  ggplot(pred_plot_dat, aes(x = coords.x2, y = coords.y2)) + 
+  geom_point(size = 0.01, aes(colour = volume.m3.ha), 
+             show.legend = FALSE)+
+  geom_point(data = obs_plot_dat,
+             size = 0.01, 
+             aes(x = coord.x2, y = coord.y2,
+                 #fill = volume.m3.ha, 
+                 colour = volume.m3.ha)) +
+  geom_point(data = plot.y, aes(x=coords.x, y=coords.y), size=5, shape=1,
+             color="orange", stroke = 1) +
+  scale_color_gradient(limits = range(obs_plot_dat$volume.m3.ha,
+                                      pred_plot_dat$volume.m3.ha),
+                       name = expression(m^3/ha))+
+  xlim(422800, 424300) + ylim(173500, 174300) + xlab("x") + ylab("y") 
+p_py2
+
+ggsave("./pics/Laas_zoom.png", plot = p_py2, 
+       width = 6.5, height = 3.0, units = "in", dpi = 600)
+
+
+## create a grid for Lass zoom in region ##
+
+p_py_g <-  ggplot(pred_plot_dat, aes(x = coords.x2, y = coords.y2)) + 
+  geom_point(size = 0.01, aes(colour = volume.m3.ha), 
+             show.legend = FALSE)+
+  geom_point(data = obs_plot_dat,
+             size = 0.01, 
+             aes(x = coord.x2, y = coord.y2,
+                 #fill = volume.m3.ha, 
+                 colour = volume.m3.ha)) +
+  geom_point(data = plot.y, aes(x=coords.x, y=coords.y), size=5, shape=1,
+             color="orange", stroke = 1) +
+  geom_vline(xintercept = seq(422800, 424300, 36)) + 
+  geom_hline(yintercept = seq(173750, 174300, 36)) +
+  scale_color_gradient(limits = range(obs_plot_dat$volume.m3.ha,
+                                      pred_plot_dat$volume.m3.ha),
+                       name = expression(m^3/ha))+
+  xlim(422800, 424300) + ylim(173750, 174300) + xlab("x") + ylab("y") 
+
+p_py_g
+
+ggsave("./pics/Laas_zoom_grid.png", plot = p_py_g, 
+       width = 7.0, height = 3.0, units = "in", dpi = 600)
 
 
 

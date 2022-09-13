@@ -6,7 +6,7 @@ library(ggplot2)
 source("./project/utils.R")
 
 ## simulate data ##
-set.seed(1234) #1
+set.seed(1234) #1234 #111 #1
 #side.A = seq(from = 1/72, to = 1-1/72, by = 1/36)
 side.A = seq(from = 1/54, to = 1-1/54, by = 1/27)
 grid.A = expand.grid(side.A, side.A) # grid on the finest resolution
@@ -337,6 +337,7 @@ base_plot = dta_check %>% ggplot(aes(x=pred_value, fill=model)) +
              aes(xintercept=mobs),color="red", linetype="dashed", size=1)
 
 base_plot
-
+ggsave("./pics/hist_compar.png", plot = base_plot, 
+       width = 6.5, height = 4.5, units = "in", dpi = 600)
 
 
