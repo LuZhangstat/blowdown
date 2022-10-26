@@ -153,7 +153,7 @@ p2
 ## fit model in stan ##
 library(cmdstanr)
 library(bayesplot)
-file <- file.path(getwd(), "project/blowdown_save_RAM_weights.stan")
+file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights.stan")
 mod <- cmdstan_model(file)
 
 #-------------------------- Set parameters of priors --------------------------#
