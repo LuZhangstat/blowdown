@@ -83,13 +83,13 @@ x_obs_bar <- plot.grid.x_lit %>% group_by(obs.plot.id) %>%
 obs_xy <- plot.y %>% select(obs.plot.id, sub.region, volume.m3.ha) %>% 
   inner_join(x_obs_bar, by = "obs.plot.id") %>% 
   mutate(intercept = 1) %>%
-  select(volume.m3.ha, intercept, height.mean)
-  # mutate(x.Frohn = height.mean * (sub.region == "Frohn")) %>%
-  # mutate(x.Laas = height.mean * (sub.region == "Laas")) %>%
-  # mutate(x.Mauthen = height.mean * (sub.region == "Mauthen")) %>%
-  # mutate(x.Liesing = height.mean * (sub.region == "Liesing")) %>%
-  # mutate(x.Ploecken = height.mean * (sub.region == "Ploecken")) %>% 
-  # select(volume.m3.ha, intercept, x.Frohn, x.Laas, x.Mauthen, x.Liesing, x.Ploecken)
+  # select(volume.m3.ha, intercept, height.mean)
+  mutate(x.Frohn = height.mean * (sub.region == "Frohn")) %>%
+  mutate(x.Laas = height.mean * (sub.region == "Laas")) %>%
+  mutate(x.Mauthen = height.mean * (sub.region == "Mauthen")) %>%
+  mutate(x.Liesing = height.mean * (sub.region == "Liesing")) %>%
+  mutate(x.Ploecken = height.mean * (sub.region == "Ploecken")) %>%
+  select(volume.m3.ha, intercept, x.Frohn, x.Laas, x.Mauthen, x.Liesing, x.Ploecken)
   
 ###################
 ## Model fitting ##
@@ -105,9 +105,22 @@ Dh = plot.grid.x_lit %>% group_by(obs.plot.id) %>% # the sum_{i = 1}^{n_a} h^2_{
   summarise(Dh = sum(weight^2)) %>% pull
 
 
-HXU <- cbind(1, pred.grid.x_lit %>% group_by(pred.poly.id) %>% # the sum_{i = 1}^{n_a} h_{li} x(A_i^u) for all predict plots
-               summarize(height.mean = sum(height.m * n) / sum(n)) %>% 
-               select(height.mean) %>% pull)  # sum_{i = 1}^{n_u} h_i^u 
+# HXU <- cbind(1, pred.grid.x_lit %>% group_by(pred.poly.id) %>% # the sum_{i = 1}^{n_a} h_{li} x(A_i^u) for all predict plots
+#                summarize(height.mean = sum(height.m * n) / sum(n)) %>% 
+#                select(height.mean) %>% pull)  # sum_{i = 1}^{n_u} h_i^u 
+
+HXU <- pred.grid.x_lit %>% group_by(pred.poly.id, sub.region) %>% 
+  summarize(height.mean = sum(height.m * n) / sum(n)) %>% 
+  mutate(intercept = 1) %>% 
+  mutate(x.Frohn = height.mean * (sub.region == "Frohn")) %>%
+  mutate(x.Laas = height.mean * (sub.region == "Laas")) %>%
+  mutate(x.Mauthen = height.mean * (sub.region == "Mauthen")) %>%
+  mutate(x.Liesing = height.mean * (sub.region == "Liesing")) %>%
+  mutate(x.Ploecken = height.mean * (sub.region == "Ploecken")) %>%
+  select(intercept, x.Frohn, x.Laas, x.Mauthen, x.Liesing, x.Ploecken)
+
+HXU <- as.matrix(HXU[, -1])
+
 pred.grid.x_lit <- pred.grid.x_lit %>% group_by(pred.poly.id) %>% 
   mutate(counts = sum(n)) %>% mutate(weight = n / counts)
 pred.grid.x_lit %>% glimpse()
@@ -172,9 +185,9 @@ fit$summary()
 n_lf <- fit$sampler_diagnostics(inc_warmup = TRUE)[, 1, "n_leapfrog__"]
 sum(n_lf)
 
-fit$save_object(file = "./results/fit.RDS")
+#fit$save_object(file = "./results/fit.RDS")
 
-fit <- readRDS("./results/fit.RDS")
+#fit <- readRDS("./results/fit.RDS")
 
 ## check the fitting results 
 fit$summary()
@@ -191,6 +204,8 @@ fit_draws <- fit$draws(inc_warmup = FALSE)
 
 pick_sample_id <- seq(5, 2000, by = 10) # pick 200 samples
 #pick_sample_id <- seq(5, 2000, by = 100) # pick 200 samples
+#pick_sample_id <- seq(1, 200, by = 10) # pick 200 samples
+
 phi_ls <- c(fit_draws[, , "phi"])[pick_sample_id]
 sigmasq_ls <- c(fit_draws[, , "sigmasq"])[pick_sample_id]
 tausq_ls <- c(fit_draws[, , "tausq"])[pick_sample_id]
@@ -208,7 +223,7 @@ beta_omega_sam <- sample_beta_omega_h_quick(phi_ls, sigmasq_ls, tausq_ls,
                                     hA, hAU, ind_ls_B, ind_ls_BU,
                                     HX, mu_beta, V_beta, flat_prior = FALSE)
 proc.time() -t
-save(beta_omega_sam, file = "./results/RDA_recov_sam.RData")
+save(beta_omega_sam, file = "./results/RDA_recov_sam_2.RData")
 load("./results/RDA_recov_sam.RData")
 
 ## recover posterior samples of predictions ##
