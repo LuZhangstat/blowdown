@@ -128,9 +128,9 @@ na = nrow(grid.Aobs); nb = length(y); p = ncol(HX);
 ## fit model in stan ##
 library(cmdstanr)
 library(bayesplot)
-file <- file.path(getwd(), "project/blowdown_save_RAM_weights.stan")
-# file <- file.path(getwd(), "project/blowdown_flat.stan")
-# file <- file.path(getwd(), "project/blowdown_save_RAM.stan")
+file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights.stan")
+# file <- file.path(getwd(), "project/stan_code/blowdown_flat.stan")
+# file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM.stan")
 mod <- cmdstan_model(file)
 
 #-------------------------- Set parameters of priors --------------------------#
@@ -228,7 +228,7 @@ mean(y_A[ind_K])
 
 
 ### compare to benchmark 
-file2 <- file.path(getwd(), "project/blowdown_benchmark.stan")
+file2 <- file.path(getwd(), "project/stan_code/blowdown_benchmark.stan")
 mod2 <- cmdstan_model(file2)
 
 data2 <- list(n = nb, p = p, y = y, X = HX, 
