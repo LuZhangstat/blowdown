@@ -106,8 +106,8 @@ Dh = plot.grid.x_lit %>% group_by(obs.plot.id) %>% # the sum_{i = 1}^{n_a} h^2_{
 
 
 # HXU <- cbind(1, pred.grid.x_lit %>% group_by(pred.poly.id) %>% # the sum_{i = 1}^{n_a} h_{li} x(A_i^u) for all predict plots
-#                summarize(height.mean = sum(height.m * n) / sum(n)) %>% 
-#                select(height.mean) %>% pull)  # sum_{i = 1}^{n_u} h_i^u 
+#                summarize(height.mean = sum(height.m * n) / sum(n)) %>%
+#                select(height.mean) %>% pull)  # sum_{i = 1}^{n_u} h_i^u
 
 HXU <- pred.grid.x_lit %>% group_by(pred.poly.id, sub.region) %>% 
   summarize(height.mean = sum(height.m * n) / sum(n)) %>% 
@@ -174,10 +174,10 @@ fit <- mod$sample(
   seed = 1,
   chains = 4,
   parallel_chains = 4,
-  refresh = 50,
+  refresh = 2,
   save_warmup = TRUE,
-  iter_warmup = 500,
-  iter_sampling = 500,
+  iter_warmup = 10,
+  iter_sampling = 10,
   sig_figs = 18
 )
 
