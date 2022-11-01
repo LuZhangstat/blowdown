@@ -64,12 +64,12 @@ plot(test_1_lit$coord.x2, test_1_lit$coord.y2, type="n",
 text(test_1_lit$coord.x2, test_1_lit$coord.y2, test_1_lit$n, pos=1, offset = 0.0)
 
 # check for prediction 
-pre_1 <- pred.grid.x %>% filter(pred.poly.id == 492)
+pre_1 <- pred.grid.x %>% filter(pred.poly.id == 58)
 plot(pre_1$coords.x, pre_1$coords.y, 
      xlim = c(min(pre_1$coords.x)-1, max(pre_1$coords.x) + 1), 
      ylim = c(min(pre_1$coords.y)-1, max(pre_1$coords.y) + 1))
 
-pre_1_lit <- pred.grid.x_lit %>% filter(pred.poly.id == 492)
+pre_1_lit <- pred.grid.x_lit %>% filter(pred.poly.id == 58)
 
 plot(pre_1_lit$coords.x2, pre_1_lit$coords.y2, type="n",
      xlim = c(min(pre_1$coords.x)-1, max(pre_1$coords.x) + 1), 
@@ -150,7 +150,9 @@ p2 <- ggplot(plot.grid.x_lit, aes(x = coord.x2, y = coord.y2)) +
 p2
 
 # compute and store the distance matrix #
-gamma = 1.0
+# cloest distance between plots in Mauthen and Ploecken is 1.876 km
+# furtherest distance amony responses in Frohn is 2.61 km
+gamma = 1.8
 Dist_M <- rdist(grid.A[, -1] / 1000, grid.A[, -1] / 1000) 
 
 ## fit model in stan ##
@@ -347,11 +349,11 @@ quantile(colSums(yU_ls[yU_pre$sub.region == region, ] *
                    (1/DhU[yU_pre$sub.region == region])/1000), 
          c(0.025, 0.975))
 
-# "Frohn": 39099.63 (37601.44 41064.57)
-# "Laas": 43478.74 (42541.74 44803.45)
-# "Mauthen": 34840.27 (33900.24 35563.55)
-# "Liesing": 2904.278 (2726.702 3010.066)
-# "Ploecken": 37368.63 (36423.37 38572.36)
+# "Frohn": 37059.21 (34102.63 41171.62)
+# "Laas": 42842.2 (40096.44 45072.58)
+# "Mauthen": 34704.67 (32388.84 37831.61)
+# "Liesing": 2776.42 (2373.914 3142.085 )
+# "Ploecken": 40132.48 (35556.33 42924.40)
 
 ## zoom in subregions ##
 # filter large plots for prediction 

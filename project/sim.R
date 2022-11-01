@@ -6,7 +6,7 @@ library(ggplot2)
 source("./project/utils.R")
 
 ## simulate data ##
-set.seed(1234) #1234 #111 #1
+set.seed(111) #1234 #111 #1
 #side.A = seq(from = 1/72, to = 1-1/72, by = 1/36)
 side.A = seq(from = 1/54, to = 1-1/54, by = 1/27)
 grid.A = expand.grid(side.A, side.A) # grid on the finest resolution
@@ -39,7 +39,7 @@ w_B = dt_A[obs_ind, ] %>% group_by(plot_id) %>%
 # predict region
 O_d1 <- rdist(grid.A, t(c(0.2778, 0.69))) 
 O_d2 <- rdist(grid.A, t(c(0.2778, 0.31))) 
-ind_O <- ((O_d1 + O_d2) < 0.49 & (O_d1 + O_d2) > 0.43)
+ind_O <- ((O_d1 + O_d2) < 0.49 & (O_d1 + O_d2) > 0.43) # sum(ind_O) = 38
 
 ind_K1 <- (grid.A[, 1] >0.6 & grid.A[, 1] < 0.68 & grid.A[, 2] < 0.75 & 
              grid.A[, 2] > 0.25)
@@ -52,7 +52,7 @@ ind_K3 <- (grid.A[, 1] >0.68 & grid.A[, 1] < 0.9 & grid.A[, 2] < 0.5 &
              grid.A[, 2] > 0.25) & (grid.A[, 2] < (-grid.A[, 1] + 1.15)) &
   (grid.A[, 2] > (-grid.A[, 1] +1.1))
 
-ind_K = ind_K1 | ind_K2 | ind_K3
+ind_K = ind_K1 | ind_K2 | ind_K3 # sum(ind_K) = 48
 
 ## plot the pattern of the source and target units ##
 plot(grid.A[, 1], grid.A[, 2])
@@ -124,11 +124,16 @@ na = nrow(grid.Aobs); nb = length(y); p = ncol(HX);
 
 #C_B <- Block_COV(grid.A, plotid_ind, phi)
 
+# compute and store the distance matrix #
+gamma = 0.6
+Dist_M <- rdist(grid.Aobs, grid.Aobs) 
+
 
 ## fit model in stan ##
 library(cmdstanr)
 library(bayesplot)
-file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights.stan")
+file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering.stan")
+# file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights.stan")
 # file <- file.path(getwd(), "project/stan_code/blowdown_flat.stan")
 # file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM.stan")
 mod <- cmdstan_model(file)
@@ -145,7 +150,8 @@ data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh,
              gridA = grid.Aobs, hA = dt_A_obs$weight,
              plotid_ind = plotid_ind,
              mu_beta = mu_beta, V_beta = V_beta,
-             ap = ap, bp = bp, ss = ss, st = st)#,
+             ap = ap, bp = bp, ss = ss, st = st, Dist_M = Dist_M, 
+             gamma = gamma)#,
 #Dist_X = Dist_X)
 
 fit <- mod$sample(
@@ -188,10 +194,14 @@ ind_ls_BU = predid_ind
 hA = dt_A_obs$weight
 hAU = pred_dta$weight
 
-beta_omega_sam <- sample_beta_omega_h(phi_ls, sigmasq_ls, tausq_ls,
-                                      coords_A, coords_AU, hA, hAU, 
-                                      ind_ls_B, ind_ls_BU,
-                                      HX, mu_beta, V_beta, flat_prior = FALSE)
+# beta_omega_sam <- sample_beta_omega_h(phi_ls, sigmasq_ls, tausq_ls,
+#                                       coords_A, coords_AU, hA, hAU, 
+#                                       ind_ls_B, ind_ls_BU,
+#                                       HX, mu_beta, V_beta, flat_prior = FALSE)
+
+beta_omega_sam <- sample_beta_omega_h_tapering(
+  phi_ls, sigmasq_ls, tausq_ls, coords_A, coords_AU, hA, hAU, ind_ls_B, 
+  ind_ls_BU, HX, mu_beta, V_beta, gamma, flat_prior = FALSE)
 
 yU_ls <- pred_sample_y(beta_omega_sam$beta_ls, beta_omega_sam$omega_BU_ls, 
                        tausq_ls, HXU, DhU)

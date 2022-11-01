@@ -439,7 +439,6 @@ sample_beta_omega_h_quick <- function(phi_ls, sigmasq_ls, tausq_ls, coords_A,
               omega_BU_ls = omega_BU_ls))
 }
 
-
 sample_beta_omega_h_tapering <- 
   function(phi_ls, sigmasq_ls, tausq_ls, coords_A, 
            coords_AU, hA, hAU, ind_ls_B, ind_ls_BU, HX, 
@@ -472,9 +471,9 @@ sample_beta_omega_h_tapering <-
     
     
     # generate C_B_ls #
-    for(i in 1:nb){
+    t <- proc.time()
+    for(i in 1:nb){ #~300s
       for(j in i:nb){
-        #cat(i, "\t", j, "\n")
         D_temp <- rdist(coords_A[ind_ls_B[i]:(ind_ls_B[i+1]-1), ],
                         coords_A[ind_ls_B[j]:(ind_ls_B[j+1]-1), ])
         if(min(D_temp) > gamma){
@@ -484,10 +483,10 @@ sample_beta_omega_h_tapering <-
           }
         }else{
           for(k in 1:n_sam){
-            C_B_ls[i, j, k] <- sigmasq_ls[[k]] * 
-              sum((hA[ind_ls_B[i]:(ind_ls_B[i+1]-1)]) * 
-                    ((exp(-phi_ls[[k]] * D_temp) * (D_temp < gamma) * 
-                        (1 - D_temp / gamma)^4 * (1 + 4 * D_temp / gamma))%*% 
+            C_B_ls[i, j, k] <- sigmasq_ls[[k]] *
+              sum((hA[ind_ls_B[i]:(ind_ls_B[i+1]-1)]) *
+                    ((exp(-phi_ls[[k]] * D_temp) * (D_temp < gamma) *
+                        (1 - D_temp / gamma)^4 * (1 + 4 * D_temp / gamma))%*%
                        hA[ind_ls_B[j]:(ind_ls_B[j+1]-1)]))
             if(i != j){
               C_B_ls[j, i, k] <- C_B_ls[i, j, k]
@@ -496,9 +495,11 @@ sample_beta_omega_h_tapering <-
         }
       }
     }
+    proc.time() - t
     
     
     # generate C_BU_ls #
+    t <- proc.time()
     for(i in 1:nb){
       for(j in 1:nbu){
         #cat(i, "\t", j, "\n")
@@ -511,17 +512,18 @@ sample_beta_omega_h_tapering <-
           }
         }else{
           for(k in 1:n_sam){
-            C_BU_ls[i, j, k] <- sigmasq_ls[[k]] * 
-              sum((hA[ind_ls_B[i]:(ind_ls_B[i+1]-1)]) * 
-                    ((exp(-phi_ls[[k]] * D_temp) * (D_temp < gamma) * 
-                        (1 - D_temp / gamma)^4 * (1 + 4 * D_temp / gamma)) %*% 
+            C_BU_ls[i, j, k] <- sigmasq_ls[[k]] *
+              sum((hA[ind_ls_B[i]:(ind_ls_B[i+1]-1)]) *
+                    ((exp(-phi_ls[[k]] * D_temp) * (D_temp < gamma) *
+                        (1 - D_temp / gamma)^4 * (1 + 4 * D_temp / gamma)) %*%
                        hAU[ind_ls_BU[j]:(ind_ls_BU[j+1]-1)]))
           }
         }
       }
     }
+    proc.time() - t
     
-    #t <- proc.time()
+    t <- proc.time()
     # generate C_UU_ls #
     for(i in 1:nbu){
       for(j in i:nbu){
@@ -538,7 +540,7 @@ sample_beta_omega_h_tapering <-
             C_UU_ls[i, j, k] <- sigmasq_ls[[k]] * (
               sum((hAU[ind_ls_BU[i]:(ind_ls_BU[i+1]-1)]) * 
                     ((exp(-phi_ls[[k]] * D_temp) * (D_temp < gamma) * 
-                       (1 - D_temp / gamma)^4 * (1 + 4 * D_temp / gamma)) %*% 
+                        (1 - D_temp / gamma)^4 * (1 + 4 * D_temp / gamma)) %*% 
                        hAU[ind_ls_BU[j]:(ind_ls_BU[j+1]-1)])))
             if(i != j){
               C_UU_ls[j, i, k] <- C_UU_ls[i, j, k]
@@ -547,7 +549,7 @@ sample_beta_omega_h_tapering <-
         }
       }
     }
-    #proc.time() - t
+    proc.time() - t
     
     # generate posterior samples of beta omega and omega^u_B
     for(k in 1:n_sam){
