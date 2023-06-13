@@ -498,9 +498,12 @@ sample_beta_omega_h_tapering <-
     proc.time() - t
     
     
-    # generate C_BU_ls #
+    # generate C_BU_ls #~2500
     t <- proc.time()
+    #t_iter_time <- proc.time()
     for(i in 1:nb){
+      #cat(i, "\t", (proc.time() - t_iter_time)[3], "s \n")
+      #t_iter_time <- proc.time()
       for(j in 1:nbu){
         #cat(i, "\t", j, "\n")
         D_temp <- rdist(coords_A[ind_ls_B[i]:(ind_ls_B[i+1]-1), ],
@@ -524,8 +527,11 @@ sample_beta_omega_h_tapering <-
     proc.time() - t
     
     t <- proc.time()
+    #t_iter_time <- proc.time()
     # generate C_UU_ls #
     for(i in 1:nbu){
+      #cat(i, "\t", (proc.time() - t_iter_time)[3], "s \n")
+      #t_iter_time <- proc.time()
       for(j in i:nbu){
         #cat(i, "\t", j, "\n")
         D_temp <- rdist(coords_AU[ind_ls_BU[i]:(ind_ls_BU[i+1]-1), ],
