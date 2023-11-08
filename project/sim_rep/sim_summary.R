@@ -213,3 +213,8 @@ base_plot
 ggsave("./pics/PE_compar.png", plot = base_plot, 
        width = 6.5, height = 4.5, units = "in", dpi = 600)
 
+summary(abs(MSE_O_COS)); summary(abs(MSE_O_block))
+summary(abs(MSE_K_COS)); summary(abs(MSE_K_block))
+median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 2.7
+median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.7
+
