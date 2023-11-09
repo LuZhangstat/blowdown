@@ -138,6 +138,7 @@ file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering
 # file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM.stan")
 mod <- cmdstan_model(file)
 
+
 #-------------------------- Set parameters of priors --------------------------#
 mu_beta = rep(0, p)     # mean vector in the Gaussian prior of beta
 V_beta = diag(p) * 1000    # covariance matrix in the Gaussian prior of beta

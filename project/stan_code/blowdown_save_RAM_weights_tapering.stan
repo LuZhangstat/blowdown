@@ -1,7 +1,7 @@
 /* COSP model */
 
 functions{
-  matrix Block_COV(matrix coords, int[] ind_ls, real phi, int nb, vector hA,
+  matrix Block_COV(matrix coords, array[] int ind_ls, real phi, int nb, vector hA,
     matrix Dist_M, real gamma){
     // coords: coords of the ALS variables
     // int_ls: records the first index for each plot
@@ -62,7 +62,7 @@ data {
   vector[nb] Dh;
   matrix[na, 2] gridA;
   vector[na] hA;
-  int plotid_ind[nb + 1];
+  array[nb + 1] int plotid_ind;
   vector[p] mu_beta;
   matrix[p, p] V_beta;
   real ap;
