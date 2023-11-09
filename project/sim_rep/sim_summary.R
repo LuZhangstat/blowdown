@@ -179,13 +179,13 @@ sum((y_OK_025_ls[-57] <= y_OK_true_ls[-57]) &
 # coares #
 sum((y_O_2_025_ls[-57] <= y_O_true_ls[-57]) & 
       (y_O_2_975_ls[-57] >= y_O_true_ls[-57])) 
-#0.50
+#0.66
 sum((y_K_2_025_ls[-57] <= y_K_true_ls[-57]) & 
       (y_K_2_975_ls[-57] >= y_K_true_ls[-57])) 
-#0.47
+#0.77
 sum((y_OK_2_025_ls[-57] <= y_OK_true_ls[-57]) & 
       (y_OK_2_975_ls[-57] >= y_OK_true_ls[-57]))
-#0.55
+#0.72
 
 # check MSE
 MSE_O_COS <- (y_O_m_ls - y_O_true_ls)[-57]
@@ -215,6 +215,6 @@ ggsave("./pics/PE_compar.png", plot = base_plot,
 
 summary(abs(MSE_O_COS)); summary(abs(MSE_O_block))
 summary(abs(MSE_K_COS)); summary(abs(MSE_K_block))
-median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 2.7
-median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.7
+median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 1.69
+median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.25
 

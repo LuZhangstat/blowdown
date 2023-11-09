@@ -6,7 +6,7 @@ library(ggplot2)
 source("./project/utils.R")
 
 ## simulate data ##
-set.seed(111) #1234 #111 #1
+set.seed(1234) #1234 #111 #1
 #side.A = seq(from = 1/72, to = 1-1/72, by = 1/36)
 side.A = seq(from = 1/54, to = 1-1/54, by = 1/27)
 grid.A = expand.grid(side.A, side.A) # grid on the finest resolution
@@ -29,6 +29,8 @@ A_plot_id <- (D_plot < (sqrt(2)/28 + 0.01)) %*% c(1:81) # plot id on the finest 
 dt_A <- data.frame(y_A = y_A, w_A = w_A, x_A = X[, 2], plot_id = A_plot_id, 
                    coord.x = grid.A[, 1], coord.y = grid.A[, 2])
 dt_A = dt_A %>% arrange(plot_id)
+# hold_ls = c(12, 13, 14, 15, 16, 21, 25, 30, 31, 32, 33, 34, 48, 49, 50, 51, 52,
+#             57, 58, 59, 60, 61, 66, 67, 69, 70)
 hold_ls = c(20, 21, 22, 29, 31, 38, 40, 47, 49, 56, 57, 58,
             60, 51, 42, 33, 24, 62, 52, 34, 26, 61, 53, 35, 25, 43)
 obs_ls = c(1:81)[-hold_ls]
@@ -216,6 +218,7 @@ t1 <- rowMeans(beta_omega_sam$omega_B_ls) + rowMeans(beta_omega_sam$beta_ls)[1]
 t2 <- dt_A_obs %>% arrange(plot_id) %>% group_by(plot_id) %>%
   summarise(w_B = mean(w_A)) %>% pull
 plot(t1, t2 + 1)
+
 abline(a = 0, b = 1)
 
 # check the prediction plots
@@ -223,6 +226,7 @@ abline(a = 0, b = 1)
 hist(yU_ls[1, ])
 abline(v = mean(yU_ls[1, ]), col = "blue")
 abline(v = mean(y_A[ind_O]), col = "red")
+
 mean(yU_ls[1, ])
 quantile(yU_ls[1, ], c(0.025, 0.975))
 mean(y_A[ind_O])
@@ -300,10 +304,12 @@ y_B_U <- dt_A[!obs_ind, ] %>% group_by(plot_id) %>%
 plot(rowMeans(yU_ls2), y_B_U)
 abline(a = 0, b = 1) # looks good
 
-
-weight_id <- dt_A %>% mutate(pred_id = c(ind_O + ind_K*2), 
-                             pred_I = c(ind_O + ind_K)) %>% 
-  select(plot_id, pred_id, pred_I)
+weight_id <- data.frame(plot_id = A_plot_id, coord.x = grid.A[, 1], coord.y = grid.A[, 2], 
+                   pred_id = c(ind_O + ind_K*2), pred_I = c(ind_O + ind_K))
+weight_id = weight_id %>% arrange(plot_id)
+# weight_id <- dt_A %>% mutate(pred_id = c(ind_O + ind_K*2), 
+#                              pred_I = c(ind_O + ind_K)) %>% 
+#   select(plot_id, pred_id, pred_I)
 weight_id %>% glimpse()
 weight_sum <- weight_id[!obs_ind, ] %>% arrange(plot_id) %>%
   group_by(plot_id) %>% 
@@ -348,7 +354,7 @@ base_plot = dta_check %>% ggplot(aes(x=pred_value, fill=model)) +
              aes(xintercept=mobs),color="red", linetype="dashed", size=1)
 
 base_plot
-ggsave("./pics/hist_compar.png", plot = base_plot, 
+ggsave("./pics/hist_compar2.png", plot = base_plot, 
        width = 6.5, height = 4.5, units = "in", dpi = 600)
 
 

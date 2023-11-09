@@ -232,10 +232,9 @@ yU_ls2 <- pred_sample_y(beta_omega_sam2$beta_ls, beta_omega_sam2$omega_BU_ls,
 y_B_U <- dt_A[!obs_ind, ] %>% group_by(plot_id) %>% 
   summarize(y_B_U = mean(y_A)) %>% arrange(plot_id) %>% select(y_B_U) %>% pull 
 
-weight_id <- dt_A %>% mutate(pred_id = c(ind_O + ind_K*2), 
-                             pred_I = c(ind_O + ind_K)) %>% 
-  select(plot_id, pred_id, pred_I)
-weight_id %>% glimpse()
+weight_id <- data.frame(plot_id = A_plot_id, coord.x = grid.A[, 1], coord.y = grid.A[, 2], 
+                        pred_id = c(ind_O + ind_K*2), pred_I = c(ind_O + ind_K))
+weight_id = weight_id %>% arrange(plot_id)
 weight_sum <- weight_id[!obs_ind, ] %>% arrange(plot_id) %>%
   group_by(plot_id) %>% 
   summarise(pred_n = sum(pred_I), pred_id = max(pred_id)) 
