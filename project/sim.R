@@ -6,7 +6,7 @@ library(ggplot2)
 source("./project/utils.R")
 
 ## simulate data ##
-set.seed(1234) #1234 #111 #1
+set.seed(111) #1234 #111 #1
 #side.A = seq(from = 1/72, to = 1-1/72, by = 1/36)
 side.A = seq(from = 1/54, to = 1-1/54, by = 1/27)
 grid.A = expand.grid(side.A, side.A) # grid on the finest resolution
@@ -29,10 +29,10 @@ A_plot_id <- (D_plot < (sqrt(2)/28 + 0.01)) %*% c(1:81) # plot id on the finest 
 dt_A <- data.frame(y_A = y_A, w_A = w_A, x_A = X[, 2], plot_id = A_plot_id, 
                    coord.x = grid.A[, 1], coord.y = grid.A[, 2])
 dt_A = dt_A %>% arrange(plot_id)
-# hold_ls = c(12, 13, 14, 15, 16, 21, 25, 30, 31, 32, 33, 34, 48, 49, 50, 51, 52,
-#             57, 58, 59, 60, 61, 66, 67, 69, 70)
 hold_ls = c(20, 21, 22, 29, 31, 38, 40, 47, 49, 56, 57, 58,
             60, 51, 42, 33, 24, 62, 52, 34, 26, 61, 53, 35, 25, 43)
+#hold_ls = c(20, 21, 22, 29, 31, 38, 40, 47, 49, 56, 57, 58,
+#            60, 51, 42, 33, 24, 62, 52, 34, 26, 61, 53, 35, 25, 43, 30, 39, 48)
 obs_ls = c(1:81)[-hold_ls]
 obs_ind <- sapply(dt_A$plot_id, f <- function(x){any(x == obs_ls)})
 w_B = dt_A[obs_ind, ] %>% group_by(plot_id) %>% 
@@ -42,6 +42,11 @@ w_B = dt_A[obs_ind, ] %>% group_by(plot_id) %>%
 O_d1 <- rdist(grid.A, t(c(0.2778, 0.69))) 
 O_d2 <- rdist(grid.A, t(c(0.2778, 0.31))) 
 ind_O <- ((O_d1 + O_d2) < 0.49 & (O_d1 + O_d2) > 0.43) # sum(ind_O) = 38
+#ind_O <- ((O_d1 + O_d2) < 0.49) # sum(ind_O) = 38
+
+#O_d1 <- rdist(grid.A, t(c(0.2778, 0.48))) 
+#ind_O <- ((O_d1) < 0.03) # sum(ind_O) = 38
+
 
 ind_K1 <- (grid.A[, 1] >0.6 & grid.A[, 1] < 0.68 & grid.A[, 2] < 0.75 & 
              grid.A[, 2] > 0.25)
@@ -134,7 +139,8 @@ Dist_M <- rdist(grid.Aobs, grid.Aobs)
 ## fit model in stan ##
 library(cmdstanr)
 library(bayesplot)
-file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering.stan")
+file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering_phi_unif.stan")
+# file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering.stan")
 # file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights.stan")
 # file <- file.path(getwd(), "project/stan_code/blowdown_flat.stan")
 # file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM.stan")
@@ -147,7 +153,8 @@ V_beta = diag(p) * 1000    # covariance matrix in the Gaussian prior of beta
 ## take precison matrix to be zero matrix
 ss = 3 * sqrt(2)       # scale parameter in the normal prior of sigma 
 st = 3 * sqrt(2)     # scale parameter in the normal prior of tau     
-ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
+#ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
+ap = 3/500; bp = 3/0.1       # shape and rate parameters in the Gamma prior of phi 
 
 data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh, 
              gridA = grid.Aobs, hA = dt_A_obs$weight,
@@ -241,75 +248,45 @@ mean(yU_ls[2, ])
 quantile(yU_ls[2, ], c(0.025, 0.975))
 mean(y_A[ind_K])
 
+###### compare to BLOCK approach based on Andy's code #####
+library(spBayes)
+x <- c(HX[, 2])
+n.samples <- 25000
+cov.model <- "exponential"
 
-### compare to benchmark 
-file2 <- file.path(getwd(), "project/stan_code/blowdown_benchmark.stan")
-mod2 <- cmdstan_model(file2)
+starting.svi <- list("phi"=3/1, "sigma.sq"=sigma.sq, "tau.sq"=tau.sq)
+tuning.svi <- list("phi"=0.1, "sigma.sq"=0.1, "tau.sq"=0.1)
+priors.svi <- list("phi.Unif"=list(3/500, 3/0.1),
+                   "sigma.sq.IG"=list(2, ss),
+                   "tau.sq.IG"=c(2, st))
 
-data2 <- list(n = nb, p = p, y = y, X = HX, 
-              gridA = plot.centroid[obs_ls, ], 
-              mu_beta = mu_beta, V_beta = V_beta,
-              ap = ap, bp = bp, ss = ss, st = st)#,
-#Dist_X = Dist_X)
+m.1 <- spSVC(y~x, coords=plot.centroid[obs_ls, ], starting=starting.svi, 
+             svc.cols=1, tuning=tuning.svi, priors=priors.svi, 
+             cov.model=cov.model, n.samples=n.samples, n.omp.threads=1, 
+             n.report=5000)
 
-fit2 <- mod2$sample(
-  data = data2,
-  seed = 1,
-  chains = 4,
-  parallel_chains = 4,
-  refresh = 100,
-  save_warmup = TRUE,
-  iter_warmup = 500,
-  iter_sampling = 500,
-  sig_figs = 18
-)
+m.1 <- spRecover(m.1, start=floor(0.75*n.samples), thin=2, n.omp.threads=1, 
+                 verbose = FALSE)
 
-fit2_draws <- fit2$draws(inc_warmup = FALSE)
-fit2$summary()
-mcmc_trace(fit2$draws("sigmasq"), iter1 = 1) 
-mcmc_trace(fit2$draws("tausq"), iter1 = 1) 
-mcmc_trace(fit2$draws("phi"), iter1 = 1) 
-n_lf2 <- fit2$sampler_diagnostics(inc_warmup = TRUE)[, , "n_leapfrog__"]
-colSums(n_lf2)
+p.summary <- function(x){
+  quantile(x, prob=c(0.5, 0.025, 0.975))
+}
 
-pick_sample_id <- seq(5, 2000, by = 10) # pick 200 samples
-phi_ls2 <- c(fit2_draws[, , "phi"])[pick_sample_id]
-sigmasq_ls2 <- c(fit2_draws[, , "sigmasq"])[pick_sample_id]
-tausq_ls2 <- c(fit2_draws[, , "tausq"])[pick_sample_id]
-coords_A2 = plot.centroid[obs_ls, ]
-coords_AU2 = plot.centroid[-obs_ls, ]
-ind_ls_B2 = 1:(nrow(coords_A2) + 1)
-ind_ls_BU2 = 1:(nrow(coords_AU2) + 1)
-hA2 <- rep(1.0, nrow(coords_A2))
-hAU2 <- rep(1.0, nrow(coords_AU2))
+m.1.summary <- apply(rbind(t(apply(m.1$p.beta.recover.samples, 2, p.summary)),
+                           t(apply(m.1$p.theta.recover.samples, 2, p.summary))),1,format)
 
-beta_omega_sam2 <- sample_beta_omega_h(phi_ls2, sigmasq_ls2, tausq_ls2,
-                                       coords_A2, coords_AU2, hA2, hAU2, 
-                                       ind_ls_B2, ind_ls_BU2,
-                                       HX, mu_beta, V_beta, flat_prior = FALSE)
 HX2 <- as.matrix(dt_A[!obs_ind, ] %>% 
                    group_by(plot_id) %>% arrange(plot_id) %>%
                    summarize(x_B = mean(x_A)) %>%  
                    mutate(intercept = 1) %>%
                    select(intercept, x_B))
-DhU2 <- rep(1, nrow(HX2))
-
-yU_ls2 <- pred_sample_y(beta_omega_sam2$beta_ls, beta_omega_sam2$omega_BU_ls, 
-                        tausq_ls2, HX2, DhU2)
-
-# check result
-# scatter plot of predict y and true y on the unobserved coarse grid #
-y_B_U <- dt_A[!obs_ind, ] %>% group_by(plot_id) %>% 
-  summarize(y_B_U = mean(y_A)) %>% arrange(plot_id) %>% select(y_B_U) %>% pull 
-plot(rowMeans(yU_ls2), y_B_U)
-abline(a = 0, b = 1) # looks good
+## Posterior predictive samples (m^3/ha), joint prediction for all blocks within a given blowdown prediction area.
+out <- spPredict(m.1, pred.covars=HX2, pred.coords=plot.centroid[-obs_ls, ], 
+                 n.omp.threads=1, joint=TRUE, verbose = FALSE, thin=15)
 
 weight_id <- data.frame(plot_id = A_plot_id, coord.x = grid.A[, 1], coord.y = grid.A[, 2], 
-                   pred_id = c(ind_O + ind_K*2), pred_I = c(ind_O + ind_K))
+                        pred_id = c(ind_O + ind_K*2), pred_I = c(ind_O + ind_K))
 weight_id = weight_id %>% arrange(plot_id)
-# weight_id <- dt_A %>% mutate(pred_id = c(ind_O + ind_K*2), 
-#                              pred_I = c(ind_O + ind_K)) %>% 
-#   select(plot_id, pred_id, pred_I)
 weight_id %>% glimpse()
 weight_sum <- weight_id[!obs_ind, ] %>% arrange(plot_id) %>%
   group_by(plot_id) %>% 
@@ -318,31 +295,37 @@ weight_sum %>% glimpse()
 n1 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 1))
 n2 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 2))
 
-yU_O <- colSums(yU_ls2 * (weight_sum$pred_n * 
-                            as.numeric(weight_sum$pred_id == 1))) / n1
-yU_K <- colSums(yU_ls2 * (weight_sum$pred_n * 
-                            as.numeric(weight_sum$pred_id == 2))) / n2
+yU_O_block <- colSums(out$p.y.predictive.samples *  
+                        (weight_sum$pred_n * as.numeric(weight_sum$pred_id == 1))) / n1
 
+yU_K_block <- colSums(out$p.y.predictive.samples * 
+                        (weight_sum$pred_n * as.numeric(weight_sum$pred_id == 2))) / n2
 
 ## compare the posterior samples ##
-mean(yU_O)
-quantile(yU_O, c(0.025, 0.975))
+mean(yU_ls[1, ])
+mean(yU_O_block)
+quantile(yU_ls[1, ], c(0.025, 0.975))
+quantile(yU_O_block, c(0.025, 0.975))
 mean(y_A[ind_O])
 
-mean(yU_K)
-quantile(yU_K, c(0.025, 0.975))
+mean(yU_ls[2, ])
+mean(yU_K_block)
+quantile(yU_ls[2, ], c(0.025, 0.975))
+quantile(yU_K_block, c(0.025, 0.975))
 mean(y_A[ind_K])
 
+
 library(ggplot2)
-dta_check <- data.frame(pred_value = c(yU_ls[1, ], yU_O, yU_ls[2, ], yU_K),
+dta_check <- data.frame(pred_value = c(yU_ls[1, ], yU_O_block[1:200], yU_ls[2, ], 
+                                       yU_K_block[1:200]),
                         model = rep(rep(c(1, 2), each = 200), 2),
                         test = rep(c(1, 2), each = 400),
                         obs = rep(c(mean(y_A[ind_O]), mean(y_A[ind_K])), 
                                   each = 400))
 dta_check$model = factor(dta_check$model, levels = c(1, 2), 
-                         labels = c("COSP", "Benchmark"))
+                         labels = c("COS", "block"))
 dta_check$test = factor(dta_check$test, levels = c(1, 2), 
-                         labels = c("O", "K"))
+                        labels = c("O", "K"))
 
 base_plot = dta_check %>% ggplot(aes(x=pred_value, fill=model)) + 
   geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
@@ -354,7 +337,125 @@ base_plot = dta_check %>% ggplot(aes(x=pred_value, fill=model)) +
              aes(xintercept=mobs),color="red", linetype="dashed", size=1)
 
 base_plot
-ggsave("./pics/hist_compar2.png", plot = base_plot, 
+ggsave("./pics/hist_compar4.png", plot = base_plot, 
        width = 6.5, height = 4.5, units = "in", dpi = 600)
 
 
+
+
+### compare to benchmark ####
+# file2 <- file.path(getwd(), "project/stan_code/blowdown_benchmark.stan")
+# mod2 <- cmdstan_model(file2)
+# 
+# data2 <- list(n = nb, p = p, y = y, X = HX, 
+#               gridA = plot.centroid[obs_ls, ], 
+#               mu_beta = mu_beta, V_beta = V_beta,
+#               ap = ap, bp = bp, ss = ss, st = st)#,
+# #Dist_X = Dist_X)
+# 
+# fit2 <- mod2$sample(
+#   data = data2,
+#   seed = 1,
+#   chains = 4,
+#   parallel_chains = 4,
+#   refresh = 100,
+#   save_warmup = TRUE,
+#   iter_warmup = 500,
+#   iter_sampling = 500,
+#   sig_figs = 18
+# )
+# 
+# fit2_draws <- fit2$draws(inc_warmup = FALSE)
+# fit2$summary()
+# mcmc_trace(fit2$draws("sigmasq"), iter1 = 1) 
+# mcmc_trace(fit2$draws("tausq"), iter1 = 1) 
+# mcmc_trace(fit2$draws("phi"), iter1 = 1) 
+# n_lf2 <- fit2$sampler_diagnostics(inc_warmup = TRUE)[, , "n_leapfrog__"]
+# colSums(n_lf2)
+# 
+# pick_sample_id <- seq(5, 2000, by = 10) # pick 200 samples
+# phi_ls2 <- c(fit2_draws[, , "phi"])[pick_sample_id]
+# sigmasq_ls2 <- c(fit2_draws[, , "sigmasq"])[pick_sample_id]
+# tausq_ls2 <- c(fit2_draws[, , "tausq"])[pick_sample_id]
+# coords_A2 = plot.centroid[obs_ls, ]
+# coords_AU2 = plot.centroid[-obs_ls, ]
+# ind_ls_B2 = 1:(nrow(coords_A2) + 1)
+# ind_ls_BU2 = 1:(nrow(coords_AU2) + 1)
+# hA2 <- rep(1.0, nrow(coords_A2))
+# hAU2 <- rep(1.0, nrow(coords_AU2))
+# 
+# beta_omega_sam2 <- sample_beta_omega_h(phi_ls2, sigmasq_ls2, tausq_ls2,
+#                                        coords_A2, coords_AU2, hA2, hAU2, 
+#                                        ind_ls_B2, ind_ls_BU2,
+#                                        HX, mu_beta, V_beta, flat_prior = FALSE)
+# HX2 <- as.matrix(dt_A[!obs_ind, ] %>% 
+#                    group_by(plot_id) %>% arrange(plot_id) %>%
+#                    summarize(x_B = mean(x_A)) %>%  
+#                    mutate(intercept = 1) %>%
+#                    select(intercept, x_B))
+# DhU2 <- rep(1, nrow(HX2))
+# 
+# yU_ls2 <- pred_sample_y(beta_omega_sam2$beta_ls, beta_omega_sam2$omega_BU_ls, 
+#                         tausq_ls2, HX2, DhU2)
+# 
+# # check result
+# # scatter plot of predict y and true y on the unobserved coarse grid #
+# y_B_U <- dt_A[!obs_ind, ] %>% group_by(plot_id) %>% 
+#   summarize(y_B_U = mean(y_A)) %>% arrange(plot_id) %>% select(y_B_U) %>% pull 
+# plot(rowMeans(yU_ls2), y_B_U)
+# abline(a = 0, b = 1) # looks good
+# 
+# weight_id <- data.frame(plot_id = A_plot_id, coord.x = grid.A[, 1], coord.y = grid.A[, 2], 
+#                    pred_id = c(ind_O + ind_K*2), pred_I = c(ind_O + ind_K))
+# weight_id = weight_id %>% arrange(plot_id)
+# # weight_id <- dt_A %>% mutate(pred_id = c(ind_O + ind_K*2), 
+# #                              pred_I = c(ind_O + ind_K)) %>% 
+# #   select(plot_id, pred_id, pred_I)
+# weight_id %>% glimpse()
+# weight_sum <- weight_id[!obs_ind, ] %>% arrange(plot_id) %>%
+#   group_by(plot_id) %>% 
+#   summarise(pred_n = sum(pred_I), pred_id = max(pred_id)) 
+# weight_sum %>% glimpse()
+# n1 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 1))
+# n2 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 2))
+# 
+# yU_O <- colSums(yU_ls2 * (weight_sum$pred_n * 
+#                             as.numeric(weight_sum$pred_id == 1))) / n1
+# yU_K <- colSums(yU_ls2 * (weight_sum$pred_n * 
+#                             as.numeric(weight_sum$pred_id == 2))) / n2
+# 
+# 
+# ## compare the posterior samples ##
+# mean(yU_O)
+# quantile(yU_O, c(0.025, 0.975))
+# mean(y_A[ind_O])
+# 
+# mean(yU_K)
+# quantile(yU_K, c(0.025, 0.975))
+# mean(y_A[ind_K])
+# 
+# library(ggplot2)
+# dta_check <- data.frame(pred_value = c(yU_ls[1, ], yU_O, yU_ls[2, ], yU_K),
+#                         model = rep(rep(c(1, 2), each = 200), 2),
+#                         test = rep(c(1, 2), each = 400),
+#                         obs = rep(c(mean(y_A[ind_O]), mean(y_A[ind_K])), 
+#                                   each = 400))
+# dta_check$model = factor(dta_check$model, levels = c(1, 2), 
+#                          labels = c("COSP", "Benchmark"))
+# dta_check$test = factor(dta_check$test, levels = c(1, 2), 
+#                          labels = c("O", "K"))
+# 
+# base_plot = dta_check %>% ggplot(aes(x=pred_value, fill=model)) + 
+#   geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
+#   scale_fill_manual(values=c("#69b3a2", "#404080")) +
+#   theme_bw(base_size = 18) + xlab("prediction") +
+#   labs(fill="") + facet_wrap(~ test, nrow = 1) + theme(legend.position="bottom") +
+#   geom_vline(data = dta_check %>%  group_by(test) %>% 
+#                summarise(mobs = mean(obs)),
+#              aes(xintercept=mobs),color="red", linetype="dashed", size=1)
+# 
+# base_plot
+# ggsave("./pics/hist_compar3.png", plot = base_plot, 
+#        width = 6.5, height = 4.5, units = "in", dpi = 600)
+# 
+#
