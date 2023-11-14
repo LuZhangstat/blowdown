@@ -117,7 +117,8 @@ Dist_M <- rdist(grid.Aobs, grid.Aobs)
 ## fit model in stan ##
 library(cmdstanr)
 library(bayesplot)
-file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering.stan")
+file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering_phi_unif.stan")
+# file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering.stan")
 # file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights.stan")
 # file <- file.path(getwd(), "project/stan_code/blowdown_flat.stan")
 # file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM.stan")
@@ -129,7 +130,8 @@ V_beta = diag(p) * 1000    # covariance matrix in the Gaussian prior of beta
 ## take precison matrix to be zero matrix
 ss = 3 * sqrt(2)       # scale parameter in the normal prior of sigma 
 st = 3 * sqrt(2)     # scale parameter in the normal prior of tau     
-ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
+#ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
+ap = 3/500; bp = 3/0.1       # shape and rate parameters in the Gamma prior of phi 
 
 data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh, 
              gridA = grid.Aobs, hA = dt_A_obs$weight,
@@ -179,62 +181,46 @@ qut <- apply(incp_w, 1, f <- function(x){quantile(x, c(0.025, 0.975))})
 sum((qut[1,] < (w_B + 1)) & (qut[2,] > (w_B + 1))) / 55 # 98.2%
 
 
-### compare to benchmark 
-file2 <- file.path(getwd(), "project/stan_code/blowdown_benchmark.stan")
-mod2 <- cmdstan_model(file2)
+###### compare to BLOCK approach based on Andy's code #####
+library(spBayes)
+x <- c(HX[, 2])
+n.samples <- 25000
+cov.model <- "exponential"
 
-data2 <- list(n = nb, p = p, y = y, X = HX, 
-              gridA = plot.centroid[obs_ls, ], 
-              mu_beta = mu_beta, V_beta = V_beta,
-              ap = ap, bp = bp, ss = ss, st = st)
+starting.svi <- list("phi"=3/1, "sigma.sq"=sigma.sq, "tau.sq"=tau.sq)
+tuning.svi <- list("phi"=0.1, "sigma.sq"=0.1, "tau.sq"=0.1)
+priors.svi <- list("phi.Unif"=list(3/500, 3/0.1),
+                   "sigma.sq.IG"=list(2, ss),
+                   "tau.sq.IG"=c(2, st))
 
-fit2 <- mod2$sample(
-  data = data2,
-  seed = 1,
-  chains = 4,
-  parallel_chains = 4,
-  refresh = 100,
-  save_warmup = TRUE,
-  iter_warmup = 500,
-  iter_sampling = 500,
-  sig_figs = 18
-)
+m.1 <- spSVC(y~x, coords=plot.centroid[obs_ls, ], starting=starting.svi, 
+             svc.cols=1, tuning=tuning.svi, priors=priors.svi, 
+             cov.model=cov.model, n.samples=n.samples, n.omp.threads=1, 
+             n.report=5000)
 
-fit2_draws <- fit2$draws(inc_warmup = FALSE)
-print(fit2)
+m.1 <- spRecover(m.1, start=floor(0.75*n.samples), thin=2, n.omp.threads=1, 
+                 verbose = FALSE)
 
-pick_sample_id <- seq(5, 2000, by = 10) # pick 200 samples
-phi_ls2 <- c(fit2_draws[, , "phi"])[pick_sample_id]
-sigmasq_ls2 <- c(fit2_draws[, , "sigmasq"])[pick_sample_id]
-tausq_ls2 <- c(fit2_draws[, , "tausq"])[pick_sample_id]
-coords_A2 = plot.centroid[obs_ls, ]
-coords_AU2 = plot.centroid[-obs_ls, ]
-ind_ls_B2 = 1:(nrow(coords_A2) + 1)
-ind_ls_BU2 = 1:(nrow(coords_AU2) + 1)
-hA2 <- rep(1.0, nrow(coords_A2))
-hAU2 <- rep(1.0, nrow(coords_AU2))
+p.summary <- function(x){
+  quantile(x, prob=c(0.5, 0.025, 0.975))
+}
 
-beta_omega_sam2 <- sample_beta_omega_h(phi_ls2, sigmasq_ls2, tausq_ls2,
-                                       coords_A2, coords_AU2, hA2, hAU2, 
-                                       ind_ls_B2, ind_ls_BU2,
-                                       HX, mu_beta, V_beta, flat_prior = FALSE)
+m.1.summary <- apply(rbind(t(apply(m.1$p.beta.recover.samples, 2, p.summary)),
+                           t(apply(m.1$p.theta.recover.samples, 2, p.summary))),1,format)
+
 HX2 <- as.matrix(dt_A[!obs_ind, ] %>% 
                    group_by(plot_id) %>% arrange(plot_id) %>%
                    summarize(x_B = mean(x_A)) %>%  
                    mutate(intercept = 1) %>%
                    select(intercept, x_B))
-DhU2 <- rep(1, nrow(HX2))
-
-yU_ls2 <- pred_sample_y(beta_omega_sam2$beta_ls, beta_omega_sam2$omega_BU_ls, 
-                        tausq_ls2, HX2, DhU2)
-
-# check result
-y_B_U <- dt_A[!obs_ind, ] %>% group_by(plot_id) %>% 
-  summarize(y_B_U = mean(y_A)) %>% arrange(plot_id) %>% select(y_B_U) %>% pull 
+## Posterior predictive samples (m^3/ha), joint prediction for all blocks within a given blowdown prediction area.
+out <- spPredict(m.1, pred.covars=HX2, pred.coords=plot.centroid[-obs_ls, ], 
+                 n.omp.threads=1, joint=TRUE, verbose = FALSE, thin=15)
 
 weight_id <- data.frame(plot_id = A_plot_id, coord.x = grid.A[, 1], coord.y = grid.A[, 2], 
                         pred_id = c(ind_O + ind_K*2), pred_I = c(ind_O + ind_K))
 weight_id = weight_id %>% arrange(plot_id)
+weight_id %>% glimpse()
 weight_sum <- weight_id[!obs_ind, ] %>% arrange(plot_id) %>%
   group_by(plot_id) %>% 
   summarise(pred_n = sum(pred_I), pred_id = max(pred_id)) 
@@ -242,10 +228,11 @@ weight_sum %>% glimpse()
 n1 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 1))
 n2 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 2))
 
-yU_O <- colSums(yU_ls2 * (weight_sum$pred_n * 
-                            as.numeric(weight_sum$pred_id == 1))) / n1
-yU_K <- colSums(yU_ls2 * (weight_sum$pred_n * 
-                            as.numeric(weight_sum$pred_id == 2))) / n2
+yU_O <- colSums(out$p.y.predictive.samples *  
+                        (weight_sum$pred_n * as.numeric(weight_sum$pred_id == 1))) / n1
+
+yU_K <- colSums(out$p.y.predictive.samples * 
+                        (weight_sum$pred_n * as.numeric(weight_sum$pred_id == 2))) / n2
 
 # save output
 output_filename <- paste0("./results/sim/sim_", input_id, ".Rdata")
@@ -254,3 +241,80 @@ y_K_true = mean(y_A[ind_K])
 
 save(yU_ls, yU_O, yU_K, y_O_true, y_K_true, file = output_filename)
 
+
+
+# ### compare to benchmark 
+# file2 <- file.path(getwd(), "project/stan_code/blowdown_benchmark.stan")
+# mod2 <- cmdstan_model(file2)
+# 
+# data2 <- list(n = nb, p = p, y = y, X = HX, 
+#               gridA = plot.centroid[obs_ls, ], 
+#               mu_beta = mu_beta, V_beta = V_beta,
+#               ap = ap, bp = bp, ss = ss, st = st)
+# 
+# fit2 <- mod2$sample(
+#   data = data2,
+#   seed = 1,
+#   chains = 4,
+#   parallel_chains = 4,
+#   refresh = 100,
+#   save_warmup = TRUE,
+#   iter_warmup = 500,
+#   iter_sampling = 500,
+#   sig_figs = 18
+# )
+# 
+# fit2_draws <- fit2$draws(inc_warmup = FALSE)
+# print(fit2)
+# 
+# pick_sample_id <- seq(5, 2000, by = 10) # pick 200 samples
+# phi_ls2 <- c(fit2_draws[, , "phi"])[pick_sample_id]
+# sigmasq_ls2 <- c(fit2_draws[, , "sigmasq"])[pick_sample_id]
+# tausq_ls2 <- c(fit2_draws[, , "tausq"])[pick_sample_id]
+# coords_A2 = plot.centroid[obs_ls, ]
+# coords_AU2 = plot.centroid[-obs_ls, ]
+# ind_ls_B2 = 1:(nrow(coords_A2) + 1)
+# ind_ls_BU2 = 1:(nrow(coords_AU2) + 1)
+# hA2 <- rep(1.0, nrow(coords_A2))
+# hAU2 <- rep(1.0, nrow(coords_AU2))
+# 
+# beta_omega_sam2 <- sample_beta_omega_h(phi_ls2, sigmasq_ls2, tausq_ls2,
+#                                        coords_A2, coords_AU2, hA2, hAU2, 
+#                                        ind_ls_B2, ind_ls_BU2,
+#                                        HX, mu_beta, V_beta, flat_prior = FALSE)
+# HX2 <- as.matrix(dt_A[!obs_ind, ] %>% 
+#                    group_by(plot_id) %>% arrange(plot_id) %>%
+#                    summarize(x_B = mean(x_A)) %>%  
+#                    mutate(intercept = 1) %>%
+#                    select(intercept, x_B))
+# DhU2 <- rep(1, nrow(HX2))
+# 
+# yU_ls2 <- pred_sample_y(beta_omega_sam2$beta_ls, beta_omega_sam2$omega_BU_ls, 
+#                         tausq_ls2, HX2, DhU2)
+# 
+# # check result
+# y_B_U <- dt_A[!obs_ind, ] %>% group_by(plot_id) %>% 
+#   summarize(y_B_U = mean(y_A)) %>% arrange(plot_id) %>% select(y_B_U) %>% pull 
+# 
+# weight_id <- data.frame(plot_id = A_plot_id, coord.x = grid.A[, 1], coord.y = grid.A[, 2], 
+#                         pred_id = c(ind_O + ind_K*2), pred_I = c(ind_O + ind_K))
+# weight_id = weight_id %>% arrange(plot_id)
+# weight_sum <- weight_id[!obs_ind, ] %>% arrange(plot_id) %>%
+#   group_by(plot_id) %>% 
+#   summarise(pred_n = sum(pred_I), pred_id = max(pred_id)) 
+# weight_sum %>% glimpse()
+# n1 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 1))
+# n2 = sum(weight_sum$pred_n * as.numeric(weight_sum$pred_id == 2))
+# 
+# yU_O <- colSums(yU_ls2 * (weight_sum$pred_n * 
+#                             as.numeric(weight_sum$pred_id == 1))) / n1
+# yU_K <- colSums(yU_ls2 * (weight_sum$pred_n * 
+#                             as.numeric(weight_sum$pred_id == 2))) / n2
+# 
+# # save output
+# output_filename <- paste0("./results/sim/sim_", input_id, ".Rdata")
+# y_O_true = mean(y_A[ind_O])
+# y_K_true = mean(y_A[ind_K])
+# 
+# save(yU_ls, yU_O, yU_K, y_O_true, y_K_true, file = output_filename)
+# 

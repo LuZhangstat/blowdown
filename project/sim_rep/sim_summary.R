@@ -131,7 +131,8 @@ ggsave("./pics/CI_K.eps", plot = p_K,
        width = 7.0, height = 3.0, units = "in", dpi = 600)
 
 # check O+K #
-
+# remove approach and block -> Block
+# Simulation
 
 # check all 100 simulations #
 for(i in c(1:56,58:101)){
@@ -167,25 +168,25 @@ for(i in c(1:56,58:101)){
 # fine #
 sum((y_O_025_ls[-57] <= y_O_true_ls[-57]) & 
       (y_O_975_ls[-57] >= y_O_true_ls[-57])) 
-#0.93
+#0.93, #0.94
 sum((y_K_025_ls[-57] <= y_K_true_ls[-57]) & 
       (y_K_975_ls[-57] >= y_K_true_ls[-57]))
 #0.97
 sum((y_OK_025_ls[-57] <= y_OK_true_ls[-57]) & 
       (y_OK_975_ls[-57] >= y_OK_true_ls[-57]))
-#0.98
+#0.98 #0.97
 
 
-# coares #
+# Block #
 sum((y_O_2_025_ls[-57] <= y_O_true_ls[-57]) & 
       (y_O_2_975_ls[-57] >= y_O_true_ls[-57])) 
-#0.66
+#0.66 vs 0.73
 sum((y_K_2_025_ls[-57] <= y_K_true_ls[-57]) & 
       (y_K_2_975_ls[-57] >= y_K_true_ls[-57])) 
-#0.77
+#0.77 vs 0.78
 sum((y_OK_2_025_ls[-57] <= y_OK_true_ls[-57]) & 
       (y_OK_2_975_ls[-57] >= y_OK_true_ls[-57]))
-#0.72
+#0.72 vs 0.81 
 
 # check MSE
 MSE_O_COS <- (y_O_m_ls - y_O_true_ls)[-57]
@@ -197,7 +198,7 @@ dta_MSE <- data.frame(MSE = c(MSE_O_block, MSE_O_COS,  MSE_K_block, MSE_K_COS),
                       approach = rep(rep(c(1, 2), each = 100), 2),
                       test = rep(c(1, 2), each = 200))
 dta_MSE$approach = factor(dta_MSE$approach, levels = c(1, 2), 
-                          labels = c("block", "COSP"))
+                          labels = c("Block", "COS"))
 dta_MSE$test = factor(dta_MSE$test, levels = c(1, 2), 
                       labels = c("O", "K"))
 
@@ -209,12 +210,14 @@ base_plot = dta_MSE %>% ggplot(aes(x=MSE, fill=approach)) +
   theme(legend.position="bottom") + 
   geom_vline(aes(xintercept=0),color="black", linetype="dashed", size=1)
 
+# change the color... grey and orange.
+
 base_plot
 ggsave("./pics/PE_compar.png", plot = base_plot, 
        width = 6.5, height = 4.5, units = "in", dpi = 600)
 
 summary(abs(MSE_O_COS)); summary(abs(MSE_O_block))
 summary(abs(MSE_K_COS)); summary(abs(MSE_K_block))
-median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 1.69
-median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.25
+median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 1.64
+median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.35
 
