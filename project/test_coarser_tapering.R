@@ -164,10 +164,9 @@ mod <- cmdstan_model(file)
 #-------------------------- Set parameters of priors --------------------------#
 mu_beta = rep(0, p)     # mean vector in the Gaussian prior of beta
 V_beta = diag(p) * 1000    # covariance matrix in the Gaussian prior of beta
-ss = 10 * sqrt(2)       # scale parameter in the normal prior of sigma 
-st = 10 * sqrt(2)     # scale parameter in the normal prior of tau     
-ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
-
+ss = 20000       # scale parameter in the inverse gamma prior of sigma 
+st = 10000       # scale parameter in the inverse gamma prior of tau  
+ap = 3/500; bp = 3/0.1       # lower and upper bound of uniform prior of phi 
 
 data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh, 
              gridA = grid.A[, -1] / 1000, hA = plot.grid.x_lit$weight,
