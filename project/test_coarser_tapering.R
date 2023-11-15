@@ -158,7 +158,7 @@ Dist_M <- rdist(grid.A[, -1] / 1000, grid.A[, -1] / 1000)
 ## fit model in stan ##
 library(cmdstanr)
 library(bayesplot)
-file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering.stan")
+file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering_phi_unif.stan")
 mod <- cmdstan_model(file)
 
 #-------------------------- Set parameters of priors --------------------------#
