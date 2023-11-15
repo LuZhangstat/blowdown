@@ -225,10 +225,12 @@ beta_omega_sam <- sample_beta_omega_h_tapering(
   phi_ls, sigmasq_ls, tausq_ls, coords_A, coords_AU, hA, hAU, ind_ls_B, 
   ind_ls_BU, HX, mu_beta, V_beta, gamma, flat_prior = FALSE)
 proc.time() -t
+#~41573
 save(beta_omega_sam, file = "./results/RDA_recov_sam.RData")
 load("./results/RDA_recov_sam.RData")
 
 ## recover posterior samples of predictions ##
+set.seed(123)
 yU_ls <- pred_sample_y(beta_omega_sam$beta_ls, beta_omega_sam$omega_BU_ls, 
                        tausq_ls, HXU, DhU)
 

@@ -62,21 +62,22 @@ ind_K3 <- (grid.A[, 1] >0.68 & grid.A[, 1] < 0.9 & grid.A[, 2] < 0.5 &
 ind_K = ind_K1 | ind_K2 | ind_K3 # sum(ind_K) = 48
 
 ## plot the pattern of the source and target units ##
-plot(grid.A[, 1], grid.A[, 2])
+plot(grid.A[, 1], grid.A[, 2], xlab = "Easting", ylab = "Northing")
 points(dt_A[obs_ind, "coord.x"], 
-       dt_A[obs_ind, "coord.y"], col = "orange", cex = 2, pch = 16)
+       dt_A[obs_ind, "coord.y"], col = "orange", cex = 1.6, pch = 16)
 points(plot.centroid[obs_ls, 1], plot.centroid[obs_ls, 2], col = "red", pch = 0, cex = 4)
 #text(plot.centroid[, 1], plot.centroid[, 2], labels = c(1:81))
 #text(grid.A[, 1], grid.A[, 2], labels = c(1:1296))
 points(grid.A[c(which(ind_O), which(ind_K)), 1], 
        grid.A[c(which(ind_O), which(ind_K)), 2], col = "blue", cex = 1, pch = 16)
 # orange: observed regions. blue: prediction plots
+# size : 4.2 * 4.6 portrait
 
 ## plot the observed data and the centroid of the observed plots
 dt_B_w <- data.frame(w_B = w_B, coords.x = plot.centroid[obs_ls, 1],
                      coords.y = plot.centroid[obs_ls, 2])
 p1 <- ggplot(dt_B_w, aes(x = coords.x, y = coords.y, colour = w_B)) +
-  geom_point()
+  geom_point() + xlab("Easting") + ylab("Northing")
 p1
 
 
@@ -151,10 +152,12 @@ mod <- cmdstan_model(file)
 mu_beta = rep(0, p)     # mean vector in the Gaussian prior of beta
 V_beta = diag(p) * 1000    # covariance matrix in the Gaussian prior of beta
 ## take precison matrix to be zero matrix
-ss = 3 * sqrt(2)       # scale parameter in the normal prior of sigma 
-st = 3 * sqrt(2)     # scale parameter in the normal prior of tau     
+#ss = 3 * sqrt(2)       # scale parameter in the normal prior of sigma 
+#st = 3 * sqrt(2)     # scale parameter in the normal prior of tau     
 #ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
-ap = 3/500; bp = 3/0.1       # shape and rate parameters in the Gamma prior of phi 
+ss = 2       # scale parameter in the inverse gamma prior of sigma 
+st = 2       # scale parameter in the inverse gamma prior of tau  
+ap = 3/500; bp = 3/0.1       # lower and upper bound of uniform prior of phi 
 
 data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh, 
              gridA = grid.Aobs, hA = dt_A_obs$weight,
@@ -183,7 +186,7 @@ mcmc_trace(fit$draws("tausq"), iter1 = 1)
 mcmc_trace(fit$draws("phi"), iter1 = 1) 
 n_lf <- fit$sampler_diagnostics(inc_warmup = TRUE)[, , "n_leapfrog__"]
 colSums(n_lf)
-
+# time 61.8 s
 
 
 opt <- mod$optimize(data=data, algorithm='lbfgs', seed = 1,
@@ -209,12 +212,17 @@ hAU = pred_dta$weight
 #                                       ind_ls_B, ind_ls_BU,
 #                                       HX, mu_beta, V_beta, flat_prior = FALSE)
 
+t <- proc.time()
 beta_omega_sam <- sample_beta_omega_h_tapering(
   phi_ls, sigmasq_ls, tausq_ls, coords_A, coords_AU, hA, hAU, ind_ls_B, 
   ind_ls_BU, HX, mu_beta, V_beta, gamma, flat_prior = FALSE)
+proc.time() - t
+# 1.56s
 
+t <- proc.time()
 yU_ls <- pred_sample_y(beta_omega_sam$beta_ls, beta_omega_sam$omega_BU_ls, 
                        tausq_ls, HXU, DhU)
+proc.time()-t
 
 # check how many 95% posterior intervals covers the true value
 incp_w <- beta_omega_sam$omega_B_ls + rep(1, nb) %*% t(beta_omega_sam$beta_ls[1, ])
@@ -256,10 +264,12 @@ cov.model <- "exponential"
 
 starting.svi <- list("phi"=3/1, "sigma.sq"=sigma.sq, "tau.sq"=tau.sq)
 tuning.svi <- list("phi"=0.1, "sigma.sq"=0.1, "tau.sq"=0.1)
-priors.svi <- list("phi.Unif"=list(3/500, 3/0.1),
+priors.svi <- list("phi.Unif"=list(ap, bp),
                    "sigma.sq.IG"=list(2, ss),
-                   "tau.sq.IG"=c(2, st))
+                   "tau.sq.IG"=c(2, st),
+                   "beta.norm"=list(mu_beta, V_beta))
 
+t <- proc.time()
 m.1 <- spSVC(y~x, coords=plot.centroid[obs_ls, ], starting=starting.svi, 
              svc.cols=1, tuning=tuning.svi, priors=priors.svi, 
              cov.model=cov.model, n.samples=n.samples, n.omp.threads=1, 
@@ -267,6 +277,8 @@ m.1 <- spSVC(y~x, coords=plot.centroid[obs_ls, ], starting=starting.svi,
 
 m.1 <- spRecover(m.1, start=floor(0.75*n.samples), thin=2, n.omp.threads=1, 
                  verbose = FALSE)
+proc.time()-t
+# 2.9s
 
 p.summary <- function(x){
   quantile(x, prob=c(0.5, 0.025, 0.975))
@@ -280,9 +292,11 @@ HX2 <- as.matrix(dt_A[!obs_ind, ] %>%
                    summarize(x_B = mean(x_A)) %>%  
                    mutate(intercept = 1) %>%
                    select(intercept, x_B))
+t <- proc.time()
 ## Posterior predictive samples (m^3/ha), joint prediction for all blocks within a given blowdown prediction area.
 out <- spPredict(m.1, pred.covars=HX2, pred.coords=plot.centroid[-obs_ls, ], 
                  n.omp.threads=1, joint=TRUE, verbose = FALSE, thin=15)
+proc.time() - t
 
 weight_id <- data.frame(plot_id = A_plot_id, coord.x = grid.A[, 1], coord.y = grid.A[, 2], 
                         pred_id = c(ind_O + ind_K*2), pred_I = c(ind_O + ind_K))

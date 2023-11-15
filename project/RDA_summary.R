@@ -127,11 +127,14 @@ ind_ls_BU = predid_ind
 hA = plot.grid.x_lit$weight
 hAU = pred.grid.x_lit$weight
 
-load("./results/RDA_recov_sam.RData")
+load("./results/RDA_recov_sam_0613.RData")
 
 ## recover posterior samples of predictions ##
-yU_ls <- pred_sample_y(beta_omega_sam$beta_ls, beta_omega_sam$omega_BU_ls, 
-                       tausq_ls, HXU, DhU)
+# set.seed(123)
+# yU_ls <- pred_sample_y(beta_omega_sam$beta_ls, beta_omega_sam$omega_BU_ls,
+#                        tausq_ls, HXU, DhU)
+# save(yU_ls, file = "./results/yU_ls.RData")
+load("./results/yU_ls.RData")
 
 yU_pre <-  data.frame(pred.poly.id = unique(pred.grid.x_lit$pred.poly.id), 
                       yU_pm = rowMeans(yU_ls),

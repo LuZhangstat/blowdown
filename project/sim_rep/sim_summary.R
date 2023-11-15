@@ -67,7 +67,7 @@ CI_O_dat <- data.frame(
   U_bound = c(y_O_975_ls - y_O_true_ls, y_O_2_975_ls - y_O_true_ls),
   sim_id = rep(1:N_sim, 2), true_M = rep(0, 2 * N_sim),
   M_T = c(y_O_m_ls - y_O_true_ls, y_O_2_m_ls - y_O_true_ls),
-  approach = rep(c("COS", "block"), each = N_sim))
+  approach = rep(c("COS", "Block"), each = N_sim))
 
 CI_O_dat$approach=as.factor(CI_O_dat$approach)
 
@@ -76,7 +76,7 @@ CI_K_dat <- data.frame(
   U_bound = c(y_K_975_ls - y_K_true_ls, y_K_2_975_ls - y_K_true_ls),
   sim_id = rep(1:N_sim, 2), true_M = rep(0, 2 * N_sim),
   M_T = c(y_K_m_ls - y_K_true_ls, y_K_2_m_ls - y_K_true_ls),
-  approach = rep(c("COS", "block"), each = N_sim))
+  approach = rep(c("COS", "Block"), each = N_sim))
 
 CI_K_dat$approach=as.factor(CI_K_dat$approach)
 
@@ -85,7 +85,7 @@ CI_OK_dat <- data.frame(
   U_bound = c(y_OK_975_ls - y_OK_true_ls, y_OK_2_975_ls - y_OK_true_ls),
   sim_id = rep(1:N_sim, 2), true_M = rep(0, 2 * N_sim),
   M_T = c(y_OK_m_ls - y_OK_true_ls, y_OK_2_m_ls - y_OK_true_ls),
-  approach = rep(c("COS", "block"), each = N_sim))
+  approach = rep(c("COS", "Block"), each = N_sim))
 
 CI_OK_dat$approach=as.factor(CI_OK_dat$approach)
 
@@ -97,7 +97,7 @@ p_O<- ggplot(CI_O_dat, aes(x=sim_id, y=true_M, group=approach, color=approach)) 
   geom_errorbar(aes(ymin=L_bound, ymax=U_bound), width=.5,
                 position=position_dodge(0.5)) + 
   theme_classic() +
-  scale_color_manual(values=c('#999999','#E69F00')) + xlab("simulation id") + 
+  scale_color_manual(values=c('#999999','#E69F00'), name = "") + xlab("Simulation ID") + 
   ylab("CI - true mean")
 
 p_K<- ggplot(CI_K_dat, aes(x=sim_id, y=true_M, group=approach, color=approach)) + 
@@ -107,7 +107,7 @@ p_K<- ggplot(CI_K_dat, aes(x=sim_id, y=true_M, group=approach, color=approach)) 
   geom_errorbar(aes(ymin=L_bound, ymax=U_bound), width=.5,
                 position=position_dodge(0.5)) + 
   theme_classic() +
-  scale_color_manual(values=c('#999999','#E69F00')) + xlab("simulation id") + 
+  scale_color_manual(values=c('#999999','#E69F00'), name = "") + xlab("Simulation ID") + 
   ylab("CI - true mean")
 
 p_OK<- ggplot(CI_OK_dat, aes(x=sim_id, y=true_M, group=approach, color=approach)) + 
@@ -117,7 +117,7 @@ p_OK<- ggplot(CI_OK_dat, aes(x=sim_id, y=true_M, group=approach, color=approach)
   geom_errorbar(aes(ymin=L_bound, ymax=U_bound), width=.5,
                 position=position_dodge(0.5)) + 
   theme_classic() +
-  scale_color_manual(values=c('#999999','#E69F00')) + xlab("simulation id") + 
+  scale_color_manual(values=c('#999999','#E69F00'), name = "") + xlab("Simulation ID") + 
   ylab("CI - true mean")
 
 p_O
@@ -168,25 +168,25 @@ for(i in c(1:56,58:101)){
 # fine #
 sum((y_O_025_ls[-57] <= y_O_true_ls[-57]) & 
       (y_O_975_ls[-57] >= y_O_true_ls[-57])) 
-#0.93, #0.94
+#0.91
 sum((y_K_025_ls[-57] <= y_K_true_ls[-57]) & 
       (y_K_975_ls[-57] >= y_K_true_ls[-57]))
-#0.97
+#0.96
 sum((y_OK_025_ls[-57] <= y_OK_true_ls[-57]) & 
       (y_OK_975_ls[-57] >= y_OK_true_ls[-57]))
-#0.98 #0.97
+#0.98 
 
 
 # Block #
 sum((y_O_2_025_ls[-57] <= y_O_true_ls[-57]) & 
       (y_O_2_975_ls[-57] >= y_O_true_ls[-57])) 
-#0.66 vs 0.73
+#0.69
 sum((y_K_2_025_ls[-57] <= y_K_true_ls[-57]) & 
       (y_K_2_975_ls[-57] >= y_K_true_ls[-57])) 
-#0.77 vs 0.78
+#0.75
 sum((y_OK_2_025_ls[-57] <= y_OK_true_ls[-57]) & 
       (y_OK_2_975_ls[-57] >= y_OK_true_ls[-57]))
-#0.72 vs 0.81 
+#0.78 
 
 # check MSE
 MSE_O_COS <- (y_O_m_ls - y_O_true_ls)[-57]
@@ -203,14 +203,12 @@ dta_MSE$test = factor(dta_MSE$test, levels = c(1, 2),
                       labels = c("O", "K"))
 
 base_plot = dta_MSE %>% ggplot(aes(x=MSE, fill=approach)) + 
-  geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
-  scale_fill_manual(values=c("#404080", "#69b3a2")) +
-  theme_bw(base_size = 18) + xlab("prediction error") +
+  geom_histogram(color="#e9ecef", alpha=0.6, position = 'identity') +
+  scale_fill_manual(values=c("#999999", "#E69F00")) +
+  theme_bw(base_size = 18) + xlab("Prediction error") + ylab("Count")+
   labs(fill="") + facet_wrap(~ test, nrow = 1) + 
   theme(legend.position="bottom") + 
   geom_vline(aes(xintercept=0),color="black", linetype="dashed", size=1)
-
-# change the color... grey and orange.
 
 base_plot
 ggsave("./pics/PE_compar.png", plot = base_plot, 
@@ -218,6 +216,6 @@ ggsave("./pics/PE_compar.png", plot = base_plot,
 
 summary(abs(MSE_O_COS)); summary(abs(MSE_O_block))
 summary(abs(MSE_K_COS)); summary(abs(MSE_K_block))
-median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 1.64
-median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.35
+median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 1.59
+median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.25
 

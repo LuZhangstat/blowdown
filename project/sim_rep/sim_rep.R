@@ -128,10 +128,9 @@ mod <- cmdstan_model(file)
 mu_beta = rep(0, p)     # mean vector in the Gaussian prior of beta
 V_beta = diag(p) * 1000    # covariance matrix in the Gaussian prior of beta
 ## take precison matrix to be zero matrix
-ss = 3 * sqrt(2)       # scale parameter in the normal prior of sigma 
-st = 3 * sqrt(2)     # scale parameter in the normal prior of tau     
-#ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
-ap = 3/500; bp = 3/0.1       # shape and rate parameters in the Gamma prior of phi 
+ss = 2       # scale parameter in the inverse gamma prior of sigma 
+st = 2       # scale parameter in the inverse gamma prior of tau  
+ap = 3/500; bp = 3/0.1       # lower and upper bound of uniform prior of phi 
 
 data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh, 
              gridA = grid.Aobs, hA = dt_A_obs$weight,
@@ -189,9 +188,10 @@ cov.model <- "exponential"
 
 starting.svi <- list("phi"=3/1, "sigma.sq"=sigma.sq, "tau.sq"=tau.sq)
 tuning.svi <- list("phi"=0.1, "sigma.sq"=0.1, "tau.sq"=0.1)
-priors.svi <- list("phi.Unif"=list(3/500, 3/0.1),
+priors.svi <- list("phi.Unif"=list(ap, bp),
                    "sigma.sq.IG"=list(2, ss),
-                   "tau.sq.IG"=c(2, st))
+                   "tau.sq.IG"=c(2, st),
+                   "beta.norm"=list(mu_beta, V_beta))
 
 m.1 <- spSVC(y~x, coords=plot.centroid[obs_ls, ], starting=starting.svi, 
              svc.cols=1, tuning=tuning.svi, priors=priors.svi, 
