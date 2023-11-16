@@ -105,7 +105,7 @@ gamma = 1.8
 Dist_M <- rdist(grid.A[, -1] / 1000, grid.A[, -1] / 1000) 
 
 # load the fitted data #
-fit <- readRDS("./results/fit.RDS")
+fit <- readRDS("./results/fit_phi_unif.RDS")
 
 ## check the fitting results 
 fit$summary()
@@ -127,14 +127,14 @@ ind_ls_BU = predid_ind
 hA = plot.grid.x_lit$weight
 hAU = pred.grid.x_lit$weight
 
-load("./results/RDA_recov_sam_0613.RData")
+load("./results/RDA_recov_sam_phi_unif.RData")
 
-## recover posterior samples of predictions ##
+# recover posterior samples of predictions ##
 # set.seed(123)
 # yU_ls <- pred_sample_y(beta_omega_sam$beta_ls, beta_omega_sam$omega_BU_ls,
 #                        tausq_ls, HXU, DhU)
-# save(yU_ls, file = "./results/yU_ls.RData")
-load("./results/yU_ls.RData")
+# save(yU_ls, file = "./results/yU_ls_phi_unif.RData")
+load("./results/yU_ls_phi_unif.RData")
 
 yU_pre <-  data.frame(pred.poly.id = unique(pred.grid.x_lit$pred.poly.id), 
                       yU_pm = rowMeans(yU_ls),

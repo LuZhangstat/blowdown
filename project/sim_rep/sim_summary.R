@@ -219,3 +219,7 @@ summary(abs(MSE_K_COS)); summary(abs(MSE_K_block))
 median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 1.59
 median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.25
 
+#compare CI widths 
+summary((y_O_975_ls[-57] - y_O_025_ls[-57])/(y_O_2_975_ls[-57] - y_O_2_025_ls[-57]))
+summary((y_K_975_ls[-57] - y_K_025_ls[-57])/(y_K_2_975_ls[-57] - y_K_2_025_ls[-57]))
+

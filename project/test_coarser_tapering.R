@@ -186,14 +186,15 @@ fit <- mod$sample(
   iter_sampling = 500,
   sig_figs = 18
 )
-
-fit$save_object(file = "./results/fit.RDS")
+# 9170.4 seconds
+fit$save_object(file = "./results/fit_phi_unif.RDS")
 
 fit <- readRDS("./results/fit.RDS")
 
 ## check the fitting results 
 fit$summary()
 mcmc_trace(fit$draws("sigmasq"), iter1 = 1) 
+mcmc_trace(fit$draws("tausq"), iter1 = 1) 
 mcmc_trace(fit$draws("tausq", inc_warmup = T), iter1 = 0, n_warmup = 50) 
 mcmc_trace(fit$draws("phi"), iter1 = 1) 
 mcmc_trace(fit$draws("lp__", inc_warmup = T), iter1 = 1) 
@@ -224,8 +225,9 @@ beta_omega_sam <- sample_beta_omega_h_tapering(
   phi_ls, sigmasq_ls, tausq_ls, coords_A, coords_AU, hA, hAU, ind_ls_B, 
   ind_ls_BU, HX, mu_beta, V_beta, gamma, flat_prior = FALSE)
 proc.time() -t
-#~41573
-save(beta_omega_sam, file = "./results/RDA_recov_sam.RData")
+#user    system   elapsed 
+#27348.492  2970.679 30311.371
+save(beta_omega_sam, file = "./results/RDA_recov_sam_phi_unif.RData")
 load("./results/RDA_recov_sam.RData")
 
 ## recover posterior samples of predictions ##
