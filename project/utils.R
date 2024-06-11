@@ -441,7 +441,7 @@ sample_beta_omega_h_quick <- function(phi_ls, sigmasq_ls, tausq_ls, coords_A,
 
 sample_beta_omega_h_tapering <- 
   function(phi_ls, sigmasq_ls, tausq_ls, coords_A, 
-           coords_AU, hA, hAU, ind_ls_B, ind_ls_BU, HX, 
+           coords_AU, hA, hAU, ind_ls_B, ind_ls_BU, HX, Dh, y,
            mu_beta, V_beta, gamma, flat_prior = FALSE){
     
     # phi_ls: vector of posterior samples of phi
@@ -496,8 +496,7 @@ sample_beta_omega_h_tapering <-
       }
     }
     proc.time() - t
-    
-    
+
     # generate C_BU_ls #~2500
     t <- proc.time()
     #t_iter_time <- proc.time()
@@ -525,7 +524,7 @@ sample_beta_omega_h_tapering <-
       }
     }
     proc.time() - t
-    
+
     t <- proc.time()
     #t_iter_time <- proc.time()
     # generate C_UU_ls #

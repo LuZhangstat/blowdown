@@ -62,16 +62,21 @@ ind_K3 <- (grid.A[, 1] >0.68 & grid.A[, 1] < 0.9 & grid.A[, 2] < 0.5 &
 ind_K = ind_K1 | ind_K2 | ind_K3 # sum(ind_K) = 48
 
 ## plot the pattern of the source and target units ##
-plot(grid.A[, 1], grid.A[, 2], xlab = "Easting", ylab = "Northing")
-points(dt_A[obs_ind, "coord.x"], 
-       dt_A[obs_ind, "coord.y"], col = "orange", cex = 1.6, pch = 16)
-points(plot.centroid[obs_ls, 1], plot.centroid[obs_ls, 2], col = "red", pch = 0, cex = 4)
+png("./pics/output_plot.png", width = 800, height = 800)
+plot(NA, xlab = "Easting", ylab = "Northing", xlim = range(grid.A[, 1]), 
+     ylim = range(grid.A[, 2]))
+# points(dt_A[obs_ind, "coord.x"], 
+#        dt_A[obs_ind, "coord.y"], col = "orange", cex = 1.6, pch = 16)
+points(plot.centroid[obs_ls, 1], plot.centroid[obs_ls, 2], col = "red", 
+       pch = 15, cex = 4)
+points(plot.centroid[obs_ls, 1], plot.centroid[obs_ls, 2], col = "black", 
+       pch = 0, cex = 4)
 #text(plot.centroid[, 1], plot.centroid[, 2], labels = c(1:81))
 #text(grid.A[, 1], grid.A[, 2], labels = c(1:1296))
 points(grid.A[c(which(ind_O), which(ind_K)), 1], 
-       grid.A[c(which(ind_O), which(ind_K)), 2], col = "blue", cex = 1, pch = 16)
+       grid.A[c(which(ind_O), which(ind_K)), 2], col = "blue", cex = 1.5, pch = 15)
 # orange: observed regions. blue: prediction plots
-# size : 4.2 * 4.6 portrait
+dev.off()
 
 ## plot the observed data and the centroid of the observed plots
 dt_B_w <- data.frame(w_B = w_B, coords.x = plot.centroid[obs_ls, 1],
