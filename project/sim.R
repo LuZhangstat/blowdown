@@ -35,8 +35,9 @@ hold_ls = c(20, 21, 22, 29, 31, 38, 40, 47, 49, 56, 57, 58,
 #            60, 51, 42, 33, 24, 62, 52, 34, 26, 61, 53, 35, 25, 43, 30, 39, 48)
 obs_ls = c(1:81)[-hold_ls]
 obs_ind <- sapply(dt_A$plot_id, f <- function(x){any(x == obs_ls)})
+dt_A <- as_tibble(dt_A)
 w_B = dt_A[obs_ind, ] %>% group_by(plot_id) %>% 
-  summarize(w_B = mean(w_A)) %>% arrange(plot_id) %>% select(w_B) %>% pull 
+  summarize(w_B = mean(w_A)) %>% arrange(plot_id) %>% dplyr::select(w_B) %>% pull() 
 
 # predict region
 O_d1 <- rdist(grid.A, t(c(0.2778, 0.69))) 
@@ -62,19 +63,33 @@ ind_K3 <- (grid.A[, 1] >0.68 & grid.A[, 1] < 0.9 & grid.A[, 2] < 0.5 &
 ind_K = ind_K1 | ind_K2 | ind_K3 # sum(ind_K) = 48
 
 ## plot the pattern of the source and target units ##
-png("./pics/output_plot.png", width = 800, height = 800)
+png("./pics/simOK.png", width = 420, height = 450)
 plot(NA, xlab = "Easting", ylab = "Northing", xlim = range(grid.A[, 1]), 
      ylim = range(grid.A[, 2]))
 # points(dt_A[obs_ind, "coord.x"], 
 #        dt_A[obs_ind, "coord.y"], col = "orange", cex = 1.6, pch = 16)
 points(plot.centroid[obs_ls, 1], plot.centroid[obs_ls, 2], col = "red", 
-       pch = 15, cex = 4)
+       pch = 15, cex = 6)
 points(plot.centroid[obs_ls, 1], plot.centroid[obs_ls, 2], col = "black", 
-       pch = 0, cex = 4)
+       pch = 0, cex = 6)
 #text(plot.centroid[, 1], plot.centroid[, 2], labels = c(1:81))
 #text(grid.A[, 1], grid.A[, 2], labels = c(1:1296))
 points(grid.A[c(which(ind_O), which(ind_K)), 1], 
-       grid.A[c(which(ind_O), which(ind_K)), 2], col = "blue", cex = 1.5, pch = 15)
+       grid.A[c(which(ind_O), which(ind_K)), 2], col = "blue", cex = 2, pch = 15)
+# orange: observed regions. blue: prediction plots
+dev.off()
+
+png("./pics/simgrid.png", width = 420, height = 450)
+plot(NA, xlab = "Easting", ylab = "Northing", xlim = range(grid.A[, 1]), 
+     ylim = range(grid.A[, 2]))
+# points(dt_A[obs_ind, "coord.x"], 
+#        dt_A[obs_ind, "coord.y"], col = "orange", cex = 1.6, pch = 16)
+points(plot.centroid[, 1], plot.centroid[, 2], col = "black", 
+       pch = 0, cex = 6.5)
+#text(plot.centroid[, 1], plot.centroid[, 2], labels = c(1:81))
+#text(grid.A[, 1], grid.A[, 2], labels = c(1:1296))
+points(grid.A[, 1], 
+       grid.A[, 2], col = "orange", cex = 2, pch = 0)
 # orange: observed regions. blue: prediction plots
 dev.off()
 
@@ -90,12 +105,12 @@ obs_xy <- as.matrix(dt_A[obs_ind, ] %>%
                       group_by(plot_id) %>% arrange(plot_id) %>%
                       summarize(x_B = mean(x_A), y_B = mean(y_A)) %>%  
                       mutate(intercept = 1) %>%
-                      select(y_B, intercept, x_B))
+                      dplyr::select(y_B, intercept, x_B))
 
 HX = as.matrix(obs_xy[, -1]); y = obs_xy[, 1]
 counts <- dt_A[obs_ind, ] %>% 
   group_by(plot_id) %>% arrange(plot_id) %>%
-  summarize(counts = n()) %>% select(counts) %>% pull
+  summarize(counts = n()) %>% dplyr::select(counts) %>% pull
 
 dt_A_obs <- dt_A[obs_ind, ]
 dt_A_obs <- dt_A_obs %>% arrange(plot_id)
@@ -116,21 +131,21 @@ pred_dta <- pred_dta %>% arrange(plot_id) %>% group_by(plot_id) %>%
   mutate(weight = n / counts)
 
 HXU <- cbind(1, pred_dta %>% group_by(plot_id) %>%  arrange(plot_id) %>%
-               summarize(x_B = mean(x_A)) %>% select(x_B) %>% pull)
+               summarize(x_B = mean(x_A)) %>% dplyr::select(x_B) %>% pull)
 counts_u <-  pred_dta %>% group_by(plot_id) %>%  arrange(plot_id) %>%
-  summarize(counts = n()) %>% select(counts) %>% pull
+  summarize(counts = n()) %>% dplyr::select(counts) %>% pull
 
 DhU = pred_dta %>% group_by(plot_id) %>%  arrange(plot_id) %>%  #the sum_{i = 1}^{n_a} h^2_{li}  for all prediction plots
   summarise(DhU = sum(weight^2)) %>% pull
 
 ## the coords of ALS variables 
 grid.Aobs <- dt_A[obs_ind, ] %>% arrange(plot_id) %>% 
-  select(coord.x, coord.y) # coordinates of predictors over regions with observation
+  dplyr::select(coord.x, coord.y) # coordinates of predictors over regions with observation
 plot_id_A <- dt_A[obs_ind, ] %>% arrange(plot_id) %>%
-  select(plot_id) %>% pull
+  dplyr::select(plot_id) %>% pull
 plotid_ind <- c(order(plot_id_A)[!duplicated(plot_id_A)], nrow(grid.Aobs) + 1) # record the first index of each plot
-grid.Au <- pred_dta %>% arrange(plot_id) %>% select(coord.x, coord.y) # coordinates of predictors over regions for prediction
-pred_id_A <- pred_dta %>% arrange(plot_id) %>% select(plot_id) %>% pull
+grid.Au <- pred_dta %>% arrange(plot_id) %>% dplyr::select(coord.x, coord.y) # coordinates of predictors over regions for prediction
+pred_id_A <- pred_dta %>% arrange(plot_id) %>% dplyr::select(plot_id) %>% pull
 predid_ind <- c(order(pred_id_A)[!duplicated(pred_id_A)], nrow(grid.Au) + 1) # record the first index of each polygon
 
 na = nrow(grid.Aobs); nb = length(y); p = ncol(HX);
@@ -146,20 +161,13 @@ Dist_M <- rdist(grid.Aobs, grid.Aobs)
 library(cmdstanr)
 library(bayesplot)
 file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering_phi_unif.stan")
-# file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights_tapering.stan")
-# file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM_weights.stan")
-# file <- file.path(getwd(), "project/stan_code/blowdown_flat.stan")
-# file <- file.path(getwd(), "project/stan_code/blowdown_save_RAM.stan")
 mod <- cmdstan_model(file)
 
 
 #-------------------------- Set parameters of priors --------------------------#
 mu_beta = rep(0, p)     # mean vector in the Gaussian prior of beta
 V_beta = diag(p) * 1000    # covariance matrix in the Gaussian prior of beta
-## take precison matrix to be zero matrix
-#ss = 3 * sqrt(2)       # scale parameter in the normal prior of sigma 
-#st = 3 * sqrt(2)     # scale parameter in the normal prior of tau     
-#ap = 3; bp = 0.5       # shape and rate parameters in the Gamma prior of phi 
+## take precision matrix to be zero matrix
 ss = 2       # scale parameter in the inverse gamma prior of sigma 
 st = 2       # scale parameter in the inverse gamma prior of tau  
 ap = 3/500; bp = 3/0.1       # lower and upper bound of uniform prior of phi 
@@ -169,8 +177,7 @@ data <- list(na = na, nb = nb, p = p, y = y, HX = HX, Dh = Dh,
              plotid_ind = plotid_ind,
              mu_beta = mu_beta, V_beta = V_beta,
              ap = ap, bp = bp, ss = ss, st = st, Dist_M = Dist_M, 
-             gamma = gamma)#,
-#Dist_X = Dist_X)
+             gamma = gamma)
 
 fit <- mod$sample(
   data = data,
@@ -212,15 +219,12 @@ ind_ls_BU = predid_ind
 hA = dt_A_obs$weight
 hAU = pred_dta$weight
 
-# beta_omega_sam <- sample_beta_omega_h(phi_ls, sigmasq_ls, tausq_ls,
-#                                       coords_A, coords_AU, hA, hAU, 
-#                                       ind_ls_B, ind_ls_BU,
-#                                       HX, mu_beta, V_beta, flat_prior = FALSE)
 
+set.seed(123)
 t <- proc.time()
 beta_omega_sam <- sample_beta_omega_h_tapering(
   phi_ls, sigmasq_ls, tausq_ls, coords_A, coords_AU, hA, hAU, ind_ls_B, 
-  ind_ls_BU, HX, mu_beta, V_beta, gamma, flat_prior = FALSE)
+  ind_ls_BU, HX, Dh, y, mu_beta, V_beta, gamma, flat_prior = FALSE)
 proc.time() - t
 # 1.56s
 
@@ -232,7 +236,7 @@ proc.time()-t
 # check how many 95% posterior intervals covers the true value
 incp_w <- beta_omega_sam$omega_B_ls + rep(1, nb) %*% t(beta_omega_sam$beta_ls[1, ])
 qut <- apply(incp_w, 1, f <- function(x){quantile(x, c(0.025, 0.975))})
-sum((qut[1,] < (w_B + 1)) & (qut[2,] > (w_B + 1))) / 55 # 98.2%
+sum((qut[1,] < (w_B + 1)) & (qut[2,] > (w_B + 1))) / 55 # 98.2% 94.5%
 
 t1 <- rowMeans(beta_omega_sam$omega_B_ls) + rowMeans(beta_omega_sam$beta_ls)[1]
 t2 <- dt_A_obs %>% arrange(plot_id) %>% group_by(plot_id) %>%
@@ -273,7 +277,7 @@ priors.svi <- list("phi.Unif"=list(ap, bp),
                    "sigma.sq.IG"=list(2, ss),
                    "tau.sq.IG"=c(2, st),
                    "beta.norm"=list(mu_beta, V_beta))
-
+set.seed(123)
 t <- proc.time()
 m.1 <- spSVC(y~x, coords=plot.centroid[obs_ls, ], starting=starting.svi, 
              svc.cols=1, tuning=tuning.svi, priors=priors.svi, 
@@ -296,7 +300,7 @@ HX2 <- as.matrix(dt_A[!obs_ind, ] %>%
                    group_by(plot_id) %>% arrange(plot_id) %>%
                    summarize(x_B = mean(x_A)) %>%  
                    mutate(intercept = 1) %>%
-                   select(intercept, x_B))
+                   dplyr::select(intercept, x_B))
 t <- proc.time()
 ## Posterior predictive samples (m^3/ha), joint prediction for all blocks within a given blowdown prediction area.
 out <- spPredict(m.1, pred.covars=HX2, pred.coords=plot.centroid[-obs_ls, ], 
