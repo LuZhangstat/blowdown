@@ -34,7 +34,7 @@ N_ind_O = 126
 N_ind_K = 108
 
 ## read in results ##
-for(i in 1:N_sim){#c(1:56,58:100)){
+for(i in 1:N_sim){
   result_name <- paste0("./results/sim2/sim_", i, ".Rdata")
   load(result_name)
   y_O_true_ls[i] <- y_O_true
