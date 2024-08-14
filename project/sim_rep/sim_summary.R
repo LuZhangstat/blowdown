@@ -34,7 +34,7 @@ N_ind_O = 38
 N_ind_K = 48
 
 ## read in results ##
-for(i in 1:N_sim){#c(1:56,58:100)){
+for(i in 1:N_sim){
   result_name <- paste0("./results/sim/sim_", i, ".Rdata")
   load(result_name)
   y_O_true_ls[i] <- y_O_true
@@ -135,7 +135,7 @@ ggsave("./pics/CI_K.eps", plot = p_K,
 # Simulation
 
 # check all 100 simulations #
-for(i in c(1:56,58:101)){
+for(i in c(1:100)){
   result_name <- paste0("./results/sim/sim_", i, ".Rdata")
   load(result_name)
   result_name <- paste0("./results/sim/sim_", i, ".Rdata")
@@ -166,33 +166,34 @@ for(i in c(1:56,58:101)){
 }
 
 # fine #
-sum((y_O_025_ls[-57] <= y_O_true_ls[-57]) & 
-      (y_O_975_ls[-57] >= y_O_true_ls[-57])) 
+sum((y_O_025_ls <= y_O_true_ls) & 
+      (y_O_975_ls >= y_O_true_ls)) 
 #0.91
-sum((y_K_025_ls[-57] <= y_K_true_ls[-57]) & 
-      (y_K_975_ls[-57] >= y_K_true_ls[-57]))
+
+sum((y_K_025_ls <= y_K_true_ls) & 
+      (y_K_975_ls >= y_K_true_ls))
 #0.96
-sum((y_OK_025_ls[-57] <= y_OK_true_ls[-57]) & 
-      (y_OK_975_ls[-57] >= y_OK_true_ls[-57]))
+sum((y_OK_025_ls <= y_OK_true_ls) & 
+      (y_OK_975_ls >= y_OK_true_ls))
 #0.98 
 
 
 # Block #
-sum((y_O_2_025_ls[-57] <= y_O_true_ls[-57]) & 
-      (y_O_2_975_ls[-57] >= y_O_true_ls[-57])) 
+sum((y_O_2_025_ls <= y_O_true_ls) & 
+      (y_O_2_975_ls >= y_O_true_ls)) 
 #0.69
-sum((y_K_2_025_ls[-57] <= y_K_true_ls[-57]) & 
-      (y_K_2_975_ls[-57] >= y_K_true_ls[-57])) 
-#0.75
-sum((y_OK_2_025_ls[-57] <= y_OK_true_ls[-57]) & 
-      (y_OK_2_975_ls[-57] >= y_OK_true_ls[-57]))
+sum((y_K_2_025_ls <= y_K_true_ls) & 
+      (y_K_2_975_ls >= y_K_true_ls)) 
+#0.74
+sum((y_OK_2_025_ls <= y_OK_true_ls) & 
+      (y_OK_2_975_ls >= y_OK_true_ls))
 #0.78 
 
 # check MSE
-MSE_O_COS <- (y_O_m_ls - y_O_true_ls)[-57]
-MSE_O_block <- (y_O_2_m_ls - y_O_true_ls)[-57]
-MSE_K_COS <- (y_K_m_ls - y_K_true_ls)[-57]
-MSE_K_block <- (y_K_2_m_ls - y_K_true_ls)[-57]
+MSE_O_COS <- (y_O_m_ls - y_O_true_ls)
+MSE_O_block <- (y_O_2_m_ls - y_O_true_ls)
+MSE_K_COS <- (y_K_m_ls - y_K_true_ls)
+MSE_K_block <- (y_K_2_m_ls - y_K_true_ls)
 
 dta_MSE <- data.frame(MSE = c(MSE_O_block, MSE_O_COS,  MSE_K_block, MSE_K_COS),
                       approach = rep(rep(c(1, 2), each = 100), 2),
@@ -216,10 +217,56 @@ ggsave("./pics/PE_compar.png", plot = base_plot,
 
 summary(abs(MSE_O_COS)); summary(abs(MSE_O_block))
 summary(abs(MSE_K_COS)); summary(abs(MSE_K_block))
-median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 1.59
-median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.25
+median(abs(MSE_O_block))/median(abs(MSE_O_COS)) # 1.57
+median(abs(MSE_K_block))/median(abs(MSE_K_COS)) # 1.30
 
 #compare CI widths 
-summary((y_O_975_ls[-57] - y_O_025_ls[-57])/(y_O_2_975_ls[-57] - y_O_2_025_ls[-57]))
-summary((y_K_975_ls[-57] - y_K_025_ls[-57])/(y_K_2_975_ls[-57] - y_K_2_025_ls[-57]))
+summary((y_O_975_ls - y_O_025_ls)/(y_O_2_975_ls - y_O_2_025_ls))
+summary((y_K_975_ls - y_K_025_ls)/(y_K_2_975_ls - y_K_2_025_ls))
+
+# rmspe #
+RMSPE_O_COS <- sqrt(mean(((y_O_m_ls - y_O_true_ls))^2))
+RMSPE_O_block <- sqrt(mean(((y_O_2_m_ls - y_O_true_ls))^2))
+RMSPE_K_COS <- sqrt(mean(((y_K_m_ls - y_K_true_ls))^2))
+RMSPE_K_block <- sqrt(mean(((y_K_2_m_ls - y_K_true_ls))^2))
+round(c(RMSPE_O_COS, RMSPE_O_block, RMSPE_K_COS, RMSPE_K_block), digits = 3)
+# 0.369 0.691 0.465 0.688
+
+# empirical coverage probabilities #
+block <- c(sqrt(mean(((y_O_2_m_ls - y_O_true_ls))^2)),
+           sqrt(mean(((y_K_2_m_ls - y_K_true_ls))^2)),
+           median(abs(y_O_2_m_ls - y_O_true_ls)),
+           median(abs(y_K_2_m_ls - y_K_true_ls)),
+           sum((y_O_2_025_ls <= y_O_true_ls) & 
+              (y_O_2_975_ls >= y_O_true_ls))/100,
+           sum((y_K_2_025_ls <= y_K_true_ls) & 
+                 (y_K_2_975_ls >= y_K_true_ls))/100,
+           mean(y_O_2_975_ls - y_O_2_025_ls),
+           mean(y_K_2_975_ls - y_K_2_025_ls))
+cos <- c(sqrt(mean(((y_O_m_ls - y_O_true_ls))^2)),
+         sqrt(mean(((y_K_m_ls - y_K_true_ls))^2)),
+         median(abs(y_O_m_ls - y_O_true_ls)),
+         median(abs(y_K_m_ls - y_K_true_ls)),
+         sum((y_O_025_ls <= y_O_true_ls) & 
+               (y_O_975_ls >= y_O_true_ls))/100,
+         sum((y_K_025_ls <= y_K_true_ls) & 
+               (y_K_975_ls >= y_K_true_ls))/100,
+         mean(y_O_975_ls - y_O_025_ls),
+         mean(y_K_975_ls - y_K_025_ls))
+
+dt <- t(as.data.frame(round(cbind(block, cos), 2)))
+rownames(dt) <- c("Block", "COS")
+kable(dt, "latex", col.names = c("RMSPE O", "RMSPE K", "MPE O", "MPE K",
+                                 "CI cover O", "CI cover K",  
+                                 "CI width O", "CI width K"), 
+      booktabs = TRUE)
+
+# \begin{tabular}{lrrrrrrrr}
+# \toprule
+# & RMSPE O & RMSPE K & MPE O & MPE K & CI cover O & CI cover K & CI width O & CI width K\\
+# \midrule
+# Block & 0.69 & 0.69 & 0.40 & 0.46 & 0.69 & 0.74 & 1.45 & 1.68\\
+# COS & 0.37 & 0.47 & 0.25 & 0.36 & 0.91 & 0.96 & 1.34 & 2.06\\
+# \bottomrule
+# \end{tabular}
 
